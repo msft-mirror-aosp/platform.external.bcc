@@ -180,6 +180,8 @@ static struct bpf_helper helpers[] = {
   {"map_pop_elem", "4.20"},
   {"map_peak_elem", "4.20"},
   {"msg_push_data", "4.20"},
+  {"msg_pop_data", "4.21"},
+  {"rc_pointer_rel", "4.21"},
 };
 
 static uint64_t ptr_to_u64(void *ptr)
@@ -340,6 +342,14 @@ static void bpf_print_hints(int ret, char *log)
       "bpf_probe_read() to copy it to the BPF stack. Sometimes the "
       "bpf_probe_read is automatic by the bcc rewriter, other times "
       "you'll need to be explicit.\n\n");
+  }
+
+  // referencing global/static variables or read only data
+  if (strstr(log, "unknown opcode") != NULL) {
+    fprintf(stderr, "HINT: The 'unknown opcode' can happen if you reference "
+      "a global or static variable, or data in read-only section. For example,"
+      " 'char *p = \"hello\"' will result in p referencing a read-only section,"
+      " and 'char p[] = \"hello\"' will have \"hello\" stored on the stack.\n\n");
   }
 
   // helper function not found in kernel
@@ -521,14 +531,16 @@ int bpf_prog_load(enum bpf_prog_type prog_type, const char *name,
     }
   }
 
-  if (strncmp(name, "kprobe__", 8) == 0)
-    name_offset = 8;
-  else if (strncmp(name, "tracepoint__", 12) == 0)
-    name_offset = 12;
-  else if (strncmp(name, "raw_tracepoint__", 16) == 0)
-    name_offset = 16;
-  memcpy(attr.prog_name, name + name_offset,
-         min(name_len - name_offset, BPF_OBJ_NAME_LEN - 1));
+  if (name_len) {
+    if (strncmp(name, "kprobe__", 8) == 0)
+      name_offset = 8;
+    else if (strncmp(name, "tracepoint__", 12) == 0)
+      name_offset = 12;
+    else if (strncmp(name, "raw_tracepoint__", 16) == 0)
+      name_offset = 16;
+    memcpy(attr.prog_name, name + name_offset,
+           min(name_len - name_offset, BPF_OBJ_NAME_LEN - 1));
+  }
 
   ret = syscall(__NR_bpf, BPF_PROG_LOAD, &attr, sizeof(attr));
   // BPF object name is not supported on older Kernels.
@@ -698,7 +710,7 @@ static int bpf_get_retprobe_bit(const char *event_type)
   close(fd);
   if (ret < 0 || ret >= (int)sizeof(buf))
     return -1;
-  if (strlen(buf) < strlen("config:"))
+  if (strncmp(buf, "config:", strlen("config:")))
     return -1;
   errno = 0;
   ret = (int)strtol(buf + strlen("config:"), NULL, 10);
