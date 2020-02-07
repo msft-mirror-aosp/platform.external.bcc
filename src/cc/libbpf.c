@@ -843,6 +843,7 @@ int bpf_attach_kprobe(int progfd, enum bpf_probe_attach_type attach_type,
   char buf[256];
   char event_alias[128];
   static char *event_type = "kprobe";
+  bool use_debugfs = false;
 
   // Try create the kprobe Perf Event with perf_event_open API.
   pfd = bpf_try_perf_event_open_with_probe(fn_name, fn_offset, -1, event_type,
@@ -850,11 +851,17 @@ int bpf_attach_kprobe(int progfd, enum bpf_probe_attach_type attach_type,
   // If failed, most likely Kernel doesn't support the new perf_event_open API
   // yet. Try create the event using debugfs.
   if (pfd < 0) {
-    snprintf(buf, sizeof(buf), "/sys/kernel/debug/tracing/%s_events", event_type);
+    snprintf(buf, sizeof(buf), "/sys/kernel/tracing/%s_events", event_type);
     kfd = open(buf, O_WRONLY | O_APPEND | O_CLOEXEC, 0);
     if (kfd < 0) {
-      fprintf(stderr, "open(%s): %s\n", buf, strerror(errno));
-      goto error;
+      use_debugfs = true;
+      snprintf(buf, sizeof(buf),
+               "/sys/kernel/debug/tracing/%s_events", event_type);
+      kfd = open(buf, O_WRONLY | O_APPEND | O_CLOEXEC, 0);
+      if (kfd < 0) {
+        fprintf(stderr, "open(%s): %s\n", buf, strerror(errno));
+        goto error;
+      }
     }
 
     snprintf(event_alias, sizeof(event_alias), "%s_bcc_%d", ev_name, getpid());
@@ -876,7 +883,13 @@ int bpf_attach_kprobe(int progfd, enum bpf_probe_attach_type attach_type,
       goto error;
     }
     close(kfd);
-    snprintf(buf, sizeof(buf), "/sys/kernel/debug/tracing/events/%ss/%s", event_type, event_alias);
+    if (use_debugfs) {
+      snprintf(buf, sizeof(buf), "/sys/kernel/debug/tracing/events/%ss/%s", event_type,
+               event_alias);
+    } else {
+      snprintf(buf, sizeof(buf), "/sys/kernel/tracing/events/%ss/%s", event_type,
+               event_alias);
+    }
   }
   // If perf_event_open succeeded, bpf_attach_tracing_event will use the created
   // Perf Event FD directly and buf would be empty and unused.
@@ -960,17 +973,23 @@ int bpf_attach_uprobe(int progfd, enum bpf_probe_attach_type attach_type,
   char event_alias[PATH_MAX];
   static char *event_type = "uprobe";
   int res, kfd = -1, pfd = -1, ns_fd = -1;
+  bool use_debugfs = false;
   // Try create the uprobe Perf Event with perf_event_open API.
   pfd = bpf_try_perf_event_open_with_probe(binary_path, offset, pid, event_type,
                                            attach_type != BPF_PROBE_ENTRY);
   // If failed, most likely Kernel doesn't support the new perf_event_open API
   // yet. Try create the event using debugfs.
   if (pfd < 0) {
-    snprintf(buf, sizeof(buf), "/sys/kernel/debug/tracing/%s_events", event_type);
+    snprintf(buf, sizeof(buf), "/sys/kernel/tracing/%s_events", event_type);
     kfd = open(buf, O_WRONLY | O_APPEND | O_CLOEXEC, 0);
     if (kfd < 0) {
-      fprintf(stderr, "open(%s): %s\n", buf, strerror(errno));
-      goto error;
+      use_debugfs = true;
+      snprintf(buf, sizeof(buf), "/sys/kernel/debug/tracing/%s_events", event_type);
+      kfd = open(buf, O_WRONLY | O_APPEND | O_CLOEXEC, 0);
+      if (kfd < 0) {
+        fprintf(stderr, "open(%s): %s\n", buf, strerror(errno));
+        goto error;
+      }
     }
 
     res = snprintf(event_alias, sizeof(event_alias), "%s_bcc_%d", ev_name, getpid());
@@ -995,8 +1014,12 @@ int bpf_attach_uprobe(int progfd, enum bpf_probe_attach_type attach_type,
     kfd = -1;
     exit_mount_ns(ns_fd);
     ns_fd = -1;
-
-    snprintf(buf, sizeof(buf), "/sys/kernel/debug/tracing/events/%ss/%s", event_type, event_alias);
+    if (use_debugfs) {
+      snprintf(buf, sizeof(buf), "/sys/kernel/debug/tracing/events/%ss/%s", event_type,
+               event_alias);
+    } else {
+      snprintf(buf, sizeof(buf), "/sys/kernel/tracing/events/%ss/%s", event_type, event_alias);
+    }
   }
   // If perf_event_open succeeded, bpf_attach_tracing_event will use the created
   // Perf Event FD directly and buf would be empty and unused.
@@ -1021,6 +1044,7 @@ static int bpf_detach_probe(const char *ev_name, const char *event_type)
   size_t bufsize = 0;
   char *cptr = NULL;
   FILE *fp;
+  bool use_debugfs = false;
 
   /*
    * For [k,u]probe created with perf_event_open (on newer kernel), it is
@@ -1028,11 +1052,16 @@ static int bpf_detach_probe(const char *ev_name, const char *event_type)
    * the %s_bcc_%d line in [k,u]probe_events. If the event is not found,
    * it is safe to skip the cleaning up process (write -:... to the file).
    */
-  snprintf(buf, sizeof(buf), "/sys/kernel/debug/tracing/%s_events", event_type);
+  snprintf(buf, sizeof(buf), "/sys/kernel/tracing/%s_events", event_type);
   fp = fopen(buf, "re");
   if (!fp) {
-    fprintf(stderr, "open(%s): %s\n", buf, strerror(errno));
-    goto error;
+    use_debugfs = true;
+    snprintf(buf, sizeof(buf), "/sys/kernel/debug/tracing/%s_events", event_type);
+    fp = fopen(buf, "re");
+    if (!fp) {
+      fprintf(stderr, "open(%s): %s\n", buf, strerror(errno));
+      goto error;
+    }
   }
 
   res = snprintf(buf, sizeof(buf), "%ss/%s_bcc_%d", event_type, ev_name, getpid());
@@ -1052,8 +1081,11 @@ static int bpf_detach_probe(const char *ev_name, const char *event_type)
 
   if (!found_event)
     return 0;
-
-  snprintf(buf, sizeof(buf), "/sys/kernel/debug/tracing/%s_events", event_type);
+  if (use_debugfs) {
+    snprintf(buf, sizeof(buf), "/sys/kernel/debug/tracing/%s_events", event_type);
+  } else {
+    snprintf(buf, sizeof(buf), "/sys/kernel/tracing/%s_events", event_type);
+  }
   kfd = open(buf, O_WRONLY | O_APPEND | O_CLOEXEC, 0);
   if (kfd < 0) {
     fprintf(stderr, "open(%s): %s\n", buf, strerror(errno));
@@ -1098,6 +1130,12 @@ int bpf_attach_tracepoint(int progfd, const char *tp_category,
   char buf[256];
   int pfd = -1;
 
+  snprintf(buf, sizeof(buf), "/sys/kernel/tracing/events/%s/%s",
+           tp_category, tp_name);
+  if (bpf_attach_tracing_event(progfd, buf, -1 /* PID */, &pfd) == 0)
+    return pfd;
+
+  // try debugfs next
   snprintf(buf, sizeof(buf), "/sys/kernel/debug/tracing/events/%s/%s",
            tp_category, tp_name);
   if (bpf_attach_tracing_event(progfd, buf, -1 /* PID */, &pfd) == 0)
