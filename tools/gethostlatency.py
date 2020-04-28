@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/python
 #
 # gethostlatency  Show latency for getaddrinfo/gethostbyname[2] calls.
 #                 For Linux, uses BCC, eBPF. Embedded C.
@@ -135,7 +135,4 @@ def print_event(cpu, data, size):
 # loop with callback to print_event
 b["events"].open_perf_buffer(print_event)
 while 1:
-    try:
-        b.perf_buffer_poll()
-    except KeyboardInterrupt:
-        exit()
+    b.perf_buffer_poll()

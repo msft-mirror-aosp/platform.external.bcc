@@ -41,14 +41,12 @@ class Probe:
     errno_mapping = {
         "kmalloc": "-ENOMEM",
         "bio": "-EIO",
-        "alloc_page" : "true",
     }
 
     @classmethod
-    def configure(cls, mode, probability, count):
+    def configure(cls, mode, probability):
         cls.mode = mode
         cls.probability = probability
-        cls.count = count
 
     def __init__(self, func, preds, length, entry):
         # length of call chain
@@ -209,14 +207,6 @@ class Probe:
         pred = self.preds[0][0]
         text = self._get_heading() + """
 {
-        u32 overriden = 0;
-        int zero = 0;
-        u32* val;
-
-        val = count.lookup(&zero);
-        if (val)
-            overriden = *val;
-
         /*
          * preparation for predicate, if necessary
          */
@@ -224,8 +214,7 @@ class Probe:
         /*
          * If this is the only call in the chain and predicate passes
          */
-        if (%s == 1 && %s && overriden < %s) {
-                count.increment(zero);
+        if (%s == 1 && %s) {
                 bpf_override_return(ctx, %s);
                 return 0;
         }
@@ -239,15 +228,12 @@ class Probe:
         /*
          * If all conds have been met and predicate passes
          */
-        if (p->conds_met == %s && %s && overriden < %s) {
-                count.increment(zero);
+        if (p->conds_met == %s && %s)
                 bpf_override_return(ctx, %s);
-        }
         return 0;
 }"""
-        return text % (self.prep, self.length, pred, Probe.count,
-                self._get_err(), self.length - 1, pred, Probe.count,
-                self._get_err())
+        return text % (self.prep, self.length, pred, self._get_err(),
+                    self.length - 1, pred, self._get_err())
 
     # presently parses and replaces STRCMP
     # STRCMP exists because string comparison is inconvenient and somewhat buggy
@@ -328,7 +314,6 @@ EXAMPLES:
     error_injection_mapping = {
         "kmalloc": "should_failslab(struct kmem_cache *s, gfp_t gfpflags)",
         "bio": "should_fail_bio(struct bio *bio)",
-        "alloc_page": "should_fail_alloc_page(gfp_t gfp_mask, unsigned int order)",
     }
 
     def __init__(self):
@@ -336,7 +321,7 @@ EXAMPLES:
                 " functionality when call chain and predicates are met",
                 formatter_class=argparse.RawDescriptionHelpFormatter,
                 epilog=Tool.examples)
-        parser.add_argument(dest="mode", choices=["kmalloc", "bio", "alloc_page"],
+        parser.add_argument(dest="mode", choices=['kmalloc','bio'],
                 help="indicate which base kernel function to fail")
         parser.add_argument(metavar="spec", dest="spec",
                 help="specify call chain")
@@ -348,8 +333,6 @@ EXAMPLES:
                 help="probability that this call chain will fail")
         parser.add_argument("-v", "--verbose", action="store_true",
                 help="print BPF program")
-        parser.add_argument("-c", "--count", action="store", default=-1,
-                help="Number of fails before bypassing the override")
         self.args = parser.parse_args()
 
         self.program = ""
@@ -361,7 +344,7 @@ EXAMPLES:
     # create_probes and associated stuff
     def _create_probes(self):
         self._parse_spec()
-        Probe.configure(self.args.mode, self.args.probability, self.args.count)
+        Probe.configure(self.args.mode, self.args.probability)
         # self, func, preds, total, entry
 
         # create all the pair probes
@@ -499,8 +482,6 @@ struct pid_struct {
 
         self.program += self._def_pid_struct()
         self.program += "BPF_HASH(m, u32, struct pid_struct);\n"
-        self.program += "BPF_ARRAY(count, u32, 1);\n"
-
         for p in self.probes:
             self.program += p.generate_program() + "\n"
 
@@ -509,10 +490,7 @@ struct pid_struct {
 
     def _main_loop(self):
         while True:
-            try:
-                self.bpf.perf_buffer_poll()
-            except KeyboardInterrupt:
-                exit()
+            self.bpf.perf_buffer_poll()
 
     def run(self):
         self._create_probes()

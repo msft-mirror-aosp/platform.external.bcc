@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/python
 # @lint-avoid-python-3-compatibility-imports
 #
 # uflow  Trace method execution flow in high-level languages.
@@ -206,7 +206,4 @@ def print_event(cpu, data, size):
 
 bpf["calls"].open_perf_buffer(print_event)
 while 1:
-    try:
-        bpf.perf_buffer_poll()
-    except KeyboardInterrupt:
-        exit()
+    bpf.perf_buffer_poll()

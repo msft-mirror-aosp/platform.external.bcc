@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/python
 # @lint-avoid-python-3-compatibility-imports
 #
 # biolatency    Summarize block device I/O latency as a histogram.
@@ -67,7 +67,7 @@ int trace_req_start(struct pt_regs *ctx, struct request *req)
 }
 
 // output
-int trace_req_done(struct pt_regs *ctx, struct request *req)
+int trace_req_completion(struct pt_regs *ctx, struct request *req)
 {
     u64 *tsp, delta;
 
@@ -116,11 +116,10 @@ b = BPF(text=bpf_text)
 if args.queued:
     b.attach_kprobe(event="blk_account_io_start", fn_name="trace_req_start")
 else:
-    if BPF.get_kprobe_functions(b'blk_start_request'):
-        b.attach_kprobe(event="blk_start_request", fn_name="trace_req_start")
+    b.attach_kprobe(event="blk_start_request", fn_name="trace_req_start")
     b.attach_kprobe(event="blk_mq_start_request", fn_name="trace_req_start")
-b.attach_kprobe(event="blk_account_io_done",
-    fn_name="trace_req_done")
+b.attach_kprobe(event="blk_account_io_completion",
+    fn_name="trace_req_completion")
 
 print("Tracing block device I/O... Hit Ctrl-C to end.")
 

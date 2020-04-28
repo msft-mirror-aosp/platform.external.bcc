@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/python
 # @lint-avoid-python-3-compatibility-imports
 #
 # tcplife   Trace the lifespan of TCP sessions and summarize.
@@ -506,7 +506,4 @@ start_ts = 0
 b["ipv4_events"].open_perf_buffer(print_ipv4_event, page_cnt=64)
 b["ipv6_events"].open_perf_buffer(print_ipv6_event, page_cnt=64)
 while 1:
-    try:
-        b.perf_buffer_poll()
-    except KeyboardInterrupt:
-        exit()
+    b.perf_buffer_poll()

@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/python
 # @lint-avoid-python-3-compatibility-imports
 #
 # biotop  block device (disk) I/O by process.
@@ -53,7 +53,7 @@ loadavg = "/proc/loadavg"
 diskstats = "/proc/diskstats"
 
 # signal handler
-def signal_ignore(signal_value, frame):
+def signal_ignore(signal, frame):
     print()
 
 # load BPF program
@@ -173,8 +173,7 @@ if args.ebpf:
 
 b = BPF(text=bpf_text)
 b.attach_kprobe(event="blk_account_io_start", fn_name="trace_pid_start")
-if BPF.get_kprobe_functions(b'blk_start_request'):
-    b.attach_kprobe(event="blk_start_request", fn_name="trace_req_start")
+b.attach_kprobe(event="blk_start_request", fn_name="trace_req_start")
 b.attach_kprobe(event="blk_mq_start_request", fn_name="trace_req_start")
 b.attach_kprobe(event="blk_account_io_completion",
     fn_name="trace_req_completion")

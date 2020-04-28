@@ -77,7 +77,4 @@ b = BPF(text=bpf_text)
 print("Tracing OOM kills... Ctrl-C to stop.")
 b["events"].open_perf_buffer(print_event)
 while 1:
-    try:
-        b.perf_buffer_poll()
-    except KeyboardInterrupt:
-        exit()
+    b.perf_buffer_poll()

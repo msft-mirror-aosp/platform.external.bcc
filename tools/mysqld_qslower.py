@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/python
 #
 # mysqld_qslower    MySQL server queries slower than a threshold.
 #                   For Linux, uses BCC, BPF. Embedded C.
@@ -130,7 +130,4 @@ def print_event(cpu, data, size):
 # loop with callback to print_event
 b["events"].open_perf_buffer(print_event, page_cnt=64)
 while 1:
-    try:
-        b.perf_buffer_poll()
-    except KeyboardInterrupt:
-        exit()
+    b.perf_buffer_poll()

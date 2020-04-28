@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/python
 # @lint-avoid-python-3-compatibility-imports
 #
 # tcpdrop   Trace TCP kernel-dropped packets/segments.
@@ -221,7 +221,4 @@ print("%-8s %-6s %-2s %-20s > %-20s %s (%s)" % ("TIME", "PID", "IP",
 b["ipv4_events"].open_perf_buffer(print_ipv4_event)
 b["ipv6_events"].open_perf_buffer(print_ipv6_event)
 while 1:
-    try:
-        b.perf_buffer_poll()
-    except KeyboardInterrupt:
-        exit()
+    b.perf_buffer_poll()

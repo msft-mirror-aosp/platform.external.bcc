@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/python
 # @lint-avoid-python-3-compatibility-imports
 #
 # tcpaccept Trace TCP accept()s.
@@ -21,7 +21,6 @@ from socket import inet_ntop, AF_INET, AF_INET6
 from struct import pack
 import argparse
 import ctypes as ct
-from bcc.utils import printb
 
 # arguments
 examples = """examples:
@@ -83,8 +82,6 @@ int kretprobe__inet_csk_accept(struct pt_regs *ctx)
 {
     struct sock *newsk = (struct sock *)PT_REGS_RC(ctx);
     u32 pid = bpf_get_current_pid_tgid();
-
-    ##FILTER_PID##
 
     if (newsk == NULL)
         return 0;
@@ -163,9 +160,6 @@ TRACEPOINT_PROBE(sock, inet_sock_set_state)
     if (args->protocol != IPPROTO_TCP)
         return 0;
     u32 pid = bpf_get_current_pid_tgid();
-
-    ##FILTER_PID##
-
     // pull in details
     u16 family = 0, lport = 0;
     family = args->family;
@@ -202,10 +196,10 @@ else:
 
 # code substitutions
 if args.pid:
-    bpf_text = bpf_text.replace('##FILTER_PID##',
+    bpf_text = bpf_text.replace('FILTER',
         'if (pid != %s) { return 0; }' % args.pid)
 else:
-    bpf_text = bpf_text.replace('##FILTER_PID##', '')
+    bpf_text = bpf_text.replace('FILTER', '')
 if debug or args.ebpf:
     print(bpf_text)
     if args.ebpf:
@@ -244,11 +238,10 @@ def print_ipv4_event(cpu, data, size):
         if start_ts == 0:
             start_ts = event.ts_us
         print("%-9.3f" % ((float(event.ts_us) - start_ts) / 1000000), end="")
-    printb(b"%-6d %-12.12s %-2d %-16s %-16s %-4d" % (event.pid,
-        event.task, event.ip,
-        inet_ntop(AF_INET, pack("I", event.daddr)).encode(),
-        inet_ntop(AF_INET, pack("I", event.saddr)).encode(),
-        event.lport))
+    print("%-6d %-12.12s %-2d %-16s %-16s %-4d" % (event.pid,
+        event.task.decode('utf-8', 'replace'), event.ip,
+        inet_ntop(AF_INET, pack("I", event.daddr)),
+        inet_ntop(AF_INET, pack("I", event.saddr)), event.lport))
 
 def print_ipv6_event(cpu, data, size):
     event = ct.cast(data, ct.POINTER(Data_ipv6)).contents
@@ -257,10 +250,9 @@ def print_ipv6_event(cpu, data, size):
         if start_ts == 0:
             start_ts = event.ts_us
         print("%-9.3f" % ((float(event.ts_us) - start_ts) / 1000000), end="")
-    printb(b"%-6d %-12.12s %-2d %-16s %-16s %-4d" % (event.pid,
-        event.task, event.ip,
-        inet_ntop(AF_INET6, event.daddr).encode(),
-        inet_ntop(AF_INET6, event.saddr).encode(),
+    print("%-6d %-12.12s %-2d %-16s %-16s %-4d" % (event.pid,
+        event.task.decode('utf-8', 'replace'), event.ip,
+        inet_ntop(AF_INET6, event.daddr),inet_ntop(AF_INET6, event.saddr),
         event.lport))
 
 # initialize BPF
@@ -278,7 +270,4 @@ start_ts = 0
 b["ipv4_events"].open_perf_buffer(print_ipv4_event)
 b["ipv6_events"].open_perf_buffer(print_ipv6_event)
 while 1:
-    try:
-        b.perf_buffer_poll()
-    except KeyboardInterrupt:
-        exit()
+    b.perf_buffer_poll()

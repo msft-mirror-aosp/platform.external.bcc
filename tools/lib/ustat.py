@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/python
 # @lint-avoid-python-3-compatibility-imports
 #
 # ustat  Activity stats from high-level languages, including exceptions,
@@ -20,9 +20,8 @@
 
 from __future__ import print_function
 import argparse
-from bcc import BPF, USDT, USDTException
+from bcc import BPF, USDT
 import os
-import sys
 from subprocess import call
 from time import sleep, strftime
 
@@ -63,12 +62,7 @@ class Probe(object):
     def _enable_probes(self):
         self.usdts = []
         for pid in self.targets:
-            try:
-                usdt = USDT(pid=pid)
-            except USDTException:
-                # avoid race condition on pid going away.
-                print("failed to instrument %d" % pid, file=sys.stderr)
-                continue
+            usdt = USDT(pid=pid)
             for event in self.events:
                 try:
                     usdt.enable_probe(event, "%s_%s" % (self.language, event))
@@ -117,9 +111,6 @@ int %s_%s(void *ctx) {
         for event, category in self.events.items():
             counts = bpf["%s_%s_counts" % (self.language, event)]
             for pid, count in counts.items():
-                if pid.value not in result:
-                    print("result was not found for %d" % pid.value, file=sys.stderr)
-                    continue
                 result[pid.value][category] = count.value
             counts.clear()
         return result

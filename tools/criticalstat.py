@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/python
 # @lint-avoid-python-3-compatibility-imports
 #
 # criticalstat  Trace long critical sections (IRQs or preemption disabled)
@@ -319,7 +319,7 @@ def print_event(cpu, data, size):
             print("NO STACK FOUND DUE TO COLLISION")
         print("===================================")
         print("")
-    except Exception:
+    except:
         sys.exit(0)
 
 b["events"].open_perf_buffer(print_event, page_cnt=256)
@@ -328,7 +328,4 @@ print("Finding critical section with {} disabled for > {}us".format(
     ('preempt' if preemptoff else 'IRQ'), args.duration))
 
 while 1:
-    try:
-        b.perf_buffer_poll()
-    except KeyboardInterrupt:
-        exit()
+    b.perf_buffer_poll();

@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/python
 # @lint-avoid-python-3-compatibility-imports
 #
 # xfsslower  Trace slow XFS operations.
@@ -303,7 +303,4 @@ else:
 # read events
 b["events"].open_perf_buffer(print_event, page_cnt=64)
 while 1:
-    try:
-        b.perf_buffer_poll()
-    except KeyboardInterrupt:
-        exit()
+    b.perf_buffer_poll()

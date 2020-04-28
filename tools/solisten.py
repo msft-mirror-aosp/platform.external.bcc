@@ -23,7 +23,6 @@ from struct import pack
 import argparse
 from bcc import BPF
 import ctypes as ct
-from bcc.utils import printb
 
 # Arguments
 examples = """Examples:
@@ -166,12 +165,12 @@ def event_printer(show_netns):
 
         # Display
         if show_netns:
-            printb(b"%-6d %-12.12s %-12s %-6s %-8s %-5s %-39s" % (
+            print("%-6d %-12.12s %-12s %-6s %-8s %-5s %-39s" % (
                 pid, event.task, event.netns, protocol, event.backlog,
                 event.lport, address,
             ))
         else:
-            printb(b"%-6d %-12.12s %-6s %-8s %-5s %-39s" % (
+            print("%-6d %-12.12s %-6s %-8s %-5s %-39s" % (
                 pid, event.task, protocol, event.backlog,
                 event.lport, address,
             ))
@@ -211,7 +210,4 @@ if __name__ == "__main__":
 
     # Read events
     while 1:
-        try:
-            b.perf_buffer_poll()
-        except KeyboardInterrupt:
-            exit()
+        b.perf_buffer_poll()

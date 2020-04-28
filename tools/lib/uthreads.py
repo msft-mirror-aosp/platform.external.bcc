@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/python
 # @lint-avoid-python-3-compatibility-imports
 #
 # uthreads  Trace thread creation/destruction events in high-level languages.
@@ -128,7 +128,4 @@ def print_event(cpu, data, size):
 
 bpf["threads"].open_perf_buffer(print_event)
 while 1:
-    try:
-        bpf.perf_buffer_poll()
-    except KeyboardInterrupt:
-        exit()
+    bpf.perf_buffer_poll()

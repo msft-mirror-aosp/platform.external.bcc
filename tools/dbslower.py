@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/python
 #
 # dbslower      Trace MySQL and PostgreSQL queries slower than a threshold.
 #
@@ -69,7 +69,7 @@ if args.path and not args.pids:
 
         (mysql_func_name, addr) = symbols[0]
 
-        if mysql_func_name.find(b'COM_DATA') >= 0:
+        if mysql_func_name.find("COM_DATA") >= 0:
             mode = "MYSQL57"
         else:
             mode = "MYSQL56"
@@ -230,7 +230,4 @@ print("%-14s %-6s %8s %s" % ("TIME(s)", "PID", "MS", "QUERY"))
 
 bpf["events"].open_perf_buffer(print_event, page_cnt=64)
 while True:
-    try:
-        bpf.perf_buffer_poll()
-    except KeyboardInterrupt:
-        exit()
+    bpf.perf_buffer_poll()
