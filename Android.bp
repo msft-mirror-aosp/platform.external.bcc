@@ -38,6 +38,7 @@ cc_library_headers {
     name: "libbpf_headers",
     vendor_available: false,
     host_supported: false,
+    native_bridge_supported: true,
     export_include_dirs: ["src/cc/includes/"],
     target: {
         linux_bionic: {
@@ -50,6 +51,7 @@ cc_library {
     name: "libbpf",
     vendor_available: false,
     host_supported: false,
+    native_bridge_supported: true,
     target: {
         android: {
             srcs: [
