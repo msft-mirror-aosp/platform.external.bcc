@@ -58,10 +58,7 @@ license {
 
 cc_defaults {
     name: "libbpf_defaults",
-    cpp_std: "c++17",
     cflags: [
-        "-Wall",
-        "-Werror",
         "-Wnullable-to-nonnull-conversion",
         "-Wthread-safety",
         "-Wunused-parameter",
