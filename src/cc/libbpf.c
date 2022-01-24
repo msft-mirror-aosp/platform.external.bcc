@@ -730,6 +730,10 @@ int bcc_prog_load_xattr(struct bpf_load_program_attr *attr, int prog_len,
 
     if (attr->prog_type == BPF_PROG_TYPE_TRACING ||
         attr->prog_type == BPF_PROG_TYPE_LSM) {
+#ifdef MINIMAL_LIBBPF
+      fprintf(stderr, "vmlinux BTF not supported in this build of libbpf\n");
+      return -1;
+#else
       ret = libbpf_find_vmlinux_btf_id(attr->name + name_offset,
                                        expected_attach_type);
       if (ret == -EINVAL) {
@@ -743,6 +747,7 @@ int bcc_prog_load_xattr(struct bpf_load_program_attr *attr, int prog_len,
 
       attr->attach_btf_id = ret;
       attr->expected_attach_type = expected_attach_type;
+#endif
     }
 
     memcpy(prog_name, attr->name + name_offset,
@@ -1378,6 +1383,7 @@ int bpf_attach_raw_tracepoint(int progfd, const char *tp_name)
   return ret;
 }
 
+#ifndef MINIMAL_LIBBPF
 bool bpf_has_kernel_btf(void)
 {
   return libbpf_find_vmlinux_btf_id("bpf_prog_put", 0) > 0;
@@ -1415,6 +1421,7 @@ cleanup:
   btf__free(btf);
   return ret;
 }
+#endif
 
 int bpf_attach_kfunc(int prog_fd)
 {
