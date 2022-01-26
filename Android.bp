@@ -102,6 +102,7 @@ cc_library {
             },
         },
     },
+    shared_libs: ["libbpf_minimal"],
 
     header_libs: [
         "libbpf_bcc_headers"
@@ -111,8 +112,13 @@ cc_library {
 
     defaults: ["bpf_defaults"],
     cflags: [
+        "-DHAVE_EXTERNAL_LIBBPF",
+        "-DMINIMAL_LIBBPF",
         "-Werror",
         "-Wall",
         "-Wextra",
+        "-Wno-sign-compare",
+        "-Wno-typedef-redefinition",
+        "-Wno-unused-parameter",
     ],
 }
