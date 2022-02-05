@@ -19,11 +19,13 @@ cc_defaults {
     compile_multilib: "first",
     cflags: [
         "--target=bpf",
+        "-fno-data-sections",
         "-fno-function-sections",
         "-fno-stack-protector",
         "-fno-unwind-tables",
         "-mcpu=generic",
         "-Wno-unused-command-line-argument",
+        "-Wno-unused-parameter",
     ],
     header_libs: [
         "bpf_prog_headers",
@@ -78,6 +80,13 @@ cc_defaults {
     generated_headers: [
         "libbpf_headers",
     ],
+    local_include_dirs: [
+        "android",
+    ],
+    srcs: [
+        "android/argp.cpp",
+        "trace_helpers.c",
+    ],
     static_libs: [
         "libbpf",
         "libelf",
@@ -85,7 +94,9 @@ cc_defaults {
     ],
     cflags: [
         "-Wno-pointer-bool-conversion",
+        "-Wno-pointer-arith",
         "-Wno-unused-parameter",
+        "-Wno-unused-variable",
     ],
     arch: {
         arm: {
@@ -95,6 +106,109 @@ cc_defaults {
             enabled: false,
         },
     },
+}
+
+cc_object {
+    name: "cpudist.bpf.o",
+    srcs: ["cpudist.bpf.c"],
+    defaults: ["bcc_bpf_defaults"],
+}
+
+genrule {
+    name: "cpudist.skel.h",
+    srcs: [":cpudist.bpf.o"],
+    out: ["cpudist.skel.h"],
+    defaults: ["bpf_skeleton_hdr_defaults"],
+}
+
+cc_binary {
+    name: "cpudist",
+    srcs: ["cpudist.c"],
+    generated_headers:  ["cpudist.skel.h"],
+    defaults: ["bcc_binary_defaults"],
+}
+
+cc_object {
+    name: "cpufreq.bpf.o",
+    srcs: ["cpufreq.bpf.c"],
+    defaults: ["bcc_bpf_defaults"],
+}
+
+genrule {
+    name: "cpufreq.skel.h",
+    srcs: [":cpufreq.bpf.o"],
+    out: ["cpufreq.skel.h"],
+    defaults: ["bpf_skeleton_hdr_defaults"],
+}
+
+cc_binary {
+    name: "cpufreq",
+    srcs: ["cpufreq.c"],
+    generated_headers:  ["cpufreq.skel.h"],
+    defaults: ["bcc_binary_defaults"],
+}
+
+cc_object {
+    name: "filelife.bpf.o",
+    srcs: ["filelife.bpf.c"],
+    defaults: ["bcc_bpf_defaults"],
+}
+
+genrule {
+    name: "filelife.skel.h",
+    srcs: [":filelife.bpf.o"],
+    out: ["filelife.skel.h"],
+    defaults: ["bpf_skeleton_hdr_defaults"],
+}
+
+cc_binary {
+    name: "filelife",
+    srcs: ["filelife.c"],
+    generated_headers:  ["filelife.skel.h"],
+    defaults: ["bcc_binary_defaults"],
+}
+
+cc_object {
+    name: "filetop.bpf.o",
+    srcs: ["filetop.bpf.c"],
+    defaults: ["bcc_bpf_defaults"],
+}
+
+genrule {
+    name: "filetop.skel.h",
+    srcs: [":filetop.bpf.o"],
+    out: ["filetop.skel.h"],
+    defaults: ["bpf_skeleton_hdr_defaults"],
+}
+
+cc_binary {
+    name: "filetop",
+    srcs: ["filetop.c"],
+    generated_headers:  ["filetop.skel.h"],
+    defaults: ["bcc_binary_defaults"],
+}
+
+cc_object {
+    name: "funclatency.bpf.o",
+    srcs: ["funclatency.bpf.c"],
+    defaults: ["bcc_bpf_defaults"],
+}
+
+genrule {
+    name: "funclatency.skel.h",
+    srcs: [":funclatency.bpf.o"],
+    out: ["funclatency.skel.h"],
+    defaults: ["bpf_skeleton_hdr_defaults"],
+}
+
+cc_binary {
+    name: "funclatency",
+    srcs: [
+        "funclatency.c",
+        "uprobe_helpers.c",
+    ],
+    generated_headers:  ["funclatency.skel.h"],
+    defaults: ["bcc_binary_defaults"],
 }
 
 cc_object {
@@ -114,5 +228,128 @@ cc_binary {
     name: "ksnoop",
     srcs: ["ksnoop.c"],
     generated_headers: ["ksnoop.skel.h"],
+    defaults: ["bcc_binary_defaults"],
+}
+
+cc_object {
+    name: "llcstat.bpf.o",
+    srcs: ["llcstat.bpf.c"],
+    defaults: ["bcc_bpf_defaults"],
+}
+
+genrule {
+    name: "llcstat.skel.h",
+    srcs: [":llcstat.bpf.o"],
+    out: ["llcstat.skel.h"],
+    defaults: ["bpf_skeleton_hdr_defaults"],
+}
+
+cc_binary {
+    name: "llcstat",
+    srcs: ["llcstat.c"],
+    generated_headers:  ["llcstat.skel.h"],
+    defaults: ["bcc_binary_defaults"],
+}
+
+cc_object {
+    name: "offcputime.bpf.o",
+    srcs: ["offcputime.bpf.c"],
+    defaults: ["bcc_bpf_defaults"],
+}
+
+genrule {
+    name: "offcputime.skel.h",
+    srcs: [":offcputime.bpf.o"],
+    out: ["offcputime.skel.h"],
+    defaults: ["bpf_skeleton_hdr_defaults"],
+}
+
+cc_binary {
+    name: "offcputime",
+    srcs: [
+        "offcputime.c",
+        "uprobe_helpers.c",
+    ],
+    generated_headers:  ["offcputime.skel.h"],
+    defaults: ["bcc_binary_defaults"],
+}
+
+cc_object {
+    name: "runqlat.bpf.o",
+    srcs: ["runqlat.bpf.c"],
+    defaults: ["bcc_bpf_defaults"],
+}
+
+genrule {
+    name: "runqlat.skel.h",
+    srcs: [":runqlat.bpf.o"],
+    out: ["runqlat.skel.h"],
+    defaults: ["bpf_skeleton_hdr_defaults"],
+}
+
+cc_binary {
+    name: "runqlat",
+    srcs: ["runqlat.c"],
+    generated_headers:  ["runqlat.skel.h"],
+    defaults: ["bcc_binary_defaults"],
+}
+
+cc_object {
+    name: "runqlen.bpf.o",
+    srcs: ["runqlen.bpf.c"],
+    defaults: ["bcc_bpf_defaults"],
+}
+
+genrule {
+    name: "runqlen.skel.h",
+    srcs: [":runqlen.bpf.o"],
+    out: ["runqlen.skel.h"],
+    defaults: ["bpf_skeleton_hdr_defaults"],
+}
+
+cc_binary {
+    name: "runqlen",
+    srcs: ["runqlen.c"],
+    generated_headers:  ["runqlen.skel.h"],
+    defaults: ["bcc_binary_defaults"],
+}
+
+cc_object {
+    name: "runqslower.bpf.o",
+    srcs: ["runqslower.bpf.c"],
+    defaults: ["bcc_bpf_defaults"],
+}
+
+genrule {
+    name: "runqslower.skel.h",
+    srcs: [":runqslower.bpf.o"],
+    out: ["runqslower.skel.h"],
+    defaults: ["bpf_skeleton_hdr_defaults"],
+}
+
+cc_binary {
+    name: "runqslower",
+    srcs: ["runqslower.c"],
+    generated_headers:  ["runqslower.skel.h"],
+    defaults: ["bcc_binary_defaults"],
+}
+
+cc_object {
+    name: "softirqs.bpf.o",
+    srcs: ["softirqs.bpf.c"],
+    defaults: ["bcc_bpf_defaults"],
+}
+
+genrule {
+    name: "softirqs.skel.h",
+    srcs: [":softirqs.bpf.o"],
+    out: ["softirqs.skel.h"],
+    defaults: ["bpf_skeleton_hdr_defaults"],
+}
+
+cc_binary {
+    name: "softirqs",
+    srcs: ["softirqs.c"],
+    generated_headers:  ["softirqs.skel.h"],
     defaults: ["bcc_binary_defaults"],
 }
