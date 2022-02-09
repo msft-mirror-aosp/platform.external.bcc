@@ -75,7 +75,7 @@ cc_defaults {
 
 cc_library_headers {
     name: "libbpf_bcc_headers",
-    vendor_available: false,
+    vendor_available: true,
     host_supported: false,
     native_bridge_supported: true,
     export_include_dirs: ["src/cc/includes/"],
@@ -88,7 +88,7 @@ cc_library_headers {
 
 cc_library {
     name: "libbpf_bcc",
-    vendor_available: false,
+    vendor_available: true,
     host_supported: false,
     native_bridge_supported: true,
     target: {
@@ -105,7 +105,7 @@ cc_library {
     shared_libs: ["libbpf_minimal"],
 
     header_libs: [
-        "libbpf_bcc_headers"
+        "libbpf_bcc_headers",
     ],
     export_header_lib_headers: ["libbpf_bcc_headers"],
     local_include_dirs: ["src/cc"],
