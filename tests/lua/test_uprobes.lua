@@ -54,12 +54,10 @@ int count(struct pt_regs *ctx) {
 }]]
 
   local b = BPF:new{text=text}
-  local pythonpath = "/usr/bin/python3"
-  local symname = "_start"
-  b:attach_uprobe{name=pythonpath, sym=symname, fn_name="count"}
-  b:attach_uprobe{name=pythonpath, sym=symname, fn_name="count", retprobe=true}
+  b:attach_uprobe{name="/usr/bin/python", sym="main", fn_name="count"}
+  b:attach_uprobe{name="/usr/bin/python", sym="main", fn_name="count", retprobe=true}
 
-  os.spawn(pythonpath .. " -V")
+  os.spawn("/usr/bin/python -V")
 
   local stats = b:get_table("stats")
   assert_true(tonumber(stats:get(0)) >= 2)

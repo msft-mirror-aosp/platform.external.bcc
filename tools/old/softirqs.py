@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 # @lint-avoid-python-3-compatibility-imports
 #
 # softirqs  Summarize soft IRQ (interrupt) event time.
@@ -147,7 +147,7 @@ else:
     bpf_text = bpf_text.replace('STORE',
         ' .ip = ip, .slot = 0 /* ignore */};' +
         'u64 zero = 0, *vp = dist.lookup_or_init(&key, &zero);' +
-        'if (vp) { (*vp) += delta; }')
+        '(*vp) += delta;')
 if debug:
     print(bpf_text)
 
