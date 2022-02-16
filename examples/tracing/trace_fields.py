@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 # Copyright (c) PLUMgrid, Inc.
 # Licensed under the Apache License, Version 2.0 (the "License")
 
@@ -18,7 +18,4 @@ int hello(void *ctx) {
 b = BPF(text=prog)
 b.attach_kprobe(event=b.get_syscall_fnname("clone"), fn_name="hello")
 print("PID MESSAGE")
-try:
-    b.trace_print(fmt="{1} {5}")
-except KeyboardInterrupt:
-    exit()
+b.trace_print(fmt="{1} {5}")
