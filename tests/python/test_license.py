@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 # Copyright (c) 2018 Clevernet, Inc.
 # Licensed under the Apache License, Version 2.0 (the "License")
 
@@ -42,10 +42,8 @@ int license_program(struct pt_regs *ctx) {
     key.uid = uid & 0xFFFFFFFF;
     bpf_get_current_comm(&(key.comm), 16);
 
-    val = counts.lookup_or_try_init(&key, &zero);  // update counter
-    if (val) {
-        (*val)++;
-    }
+    val = counts.lookup_or_init(&key, &zero);  // update counter
+    (*val)++;
     return 0;
 }
 """
