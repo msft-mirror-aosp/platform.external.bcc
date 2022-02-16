@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 # @lint-avoid-python-3-compatibility-imports
 #
 # cachetop      Count cache kernel function calls per processes
@@ -107,7 +107,7 @@ def get_processes_stats(
             misses = (apcl + apd)
 
             # rtaccess is the read hit % during the sample period.
-            # wtaccess is the write hit % during the sample period.
+            # wtaccess is the write hit % during the smaple period.
             if mpa > 0:
                 rtaccess = float(mpa) / (access + misses)
             if apcl > 0:
@@ -136,7 +136,7 @@ def handle_loop(stdscr, args):
     stdscr.nodelay(1)
     # set default sorting field
     sort_field = FIELDS.index(DEFAULT_FIELD)
-    sort_reverse = True
+    sort_reverse = False
 
     # load BPF program
     bpf_text = """
@@ -157,8 +157,8 @@ def handle_loop(stdscr, args):
         u32 uid = bpf_get_current_uid_gid();
 
         key.ip = PT_REGS_IP(ctx);
-        key.pid = pid >> 32;
-        key.uid = uid;
+        key.pid = pid & 0xFFFFFFFF;
+        key.uid = uid & 0xFFFFFFFF;
         bpf_get_current_comm(&(key.comm), 16);
 
         counts.increment(key);
@@ -169,13 +169,8 @@ def handle_loop(stdscr, args):
     b = BPF(text=bpf_text)
     b.attach_kprobe(event="add_to_page_cache_lru", fn_name="do_count")
     b.attach_kprobe(event="mark_page_accessed", fn_name="do_count")
+    b.attach_kprobe(event="account_page_dirtied", fn_name="do_count")
     b.attach_kprobe(event="mark_buffer_dirty", fn_name="do_count")
-
-    # Function account_page_dirtied() is changed to folio_account_dirtied() in 5.15.
-    if BPF.get_kprobe_functions(b'folio_account_dirtied'):
-        b.attach_kprobe(event="folio_account_dirtied", fn_name="do_count")
-    elif BPF.get_kprobe_functions(b'account_page_dirtied'):
-        b.attach_kprobe(event="account_page_dirtied", fn_name="do_count")
 
     exiting = 0
 
