@@ -49,12 +49,8 @@ class FileDesc {
   FileDesc &operator=(const FileDesc &that) = delete;
 
   FileDesc dup() const {
-    if (fd_ >= 0) {
-      int dup_fd = ::dup(fd_);
-      return FileDesc(dup_fd);
-    } else {
-      return FileDesc(-1);
-    }
+    int dup_fd = ::dup(fd_);
+    return FileDesc(dup_fd);
   }
 
   operator int() { return fd_; }

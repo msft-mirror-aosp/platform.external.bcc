@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 #
 # nodejs_http_server    Basic example of node.js USDT tracing.
 #                       For Linux, uses BCC, BPF. Embedded C.
@@ -10,7 +10,6 @@
 
 from __future__ import print_function
 from bcc import BPF, USDT
-from bcc.utils import printb
 import sys
 
 if len(sys.argv) < 2:
@@ -26,7 +25,7 @@ int do_trace(struct pt_regs *ctx) {
     uint64_t addr;
     char path[128]={0};
     bpf_usdt_readarg(6, ctx, &addr);
-    bpf_probe_read_user(&path, sizeof(path), (void *)addr);
+    bpf_probe_read(&path, sizeof(path), (void *)addr);
     bpf_trace_printk("path:%s\\n", path);
     return 0;
 };
@@ -52,6 +51,4 @@ while 1:
     except ValueError:
         print("value error")
         continue
-    except KeyboardInterrupt:
-        exit()
-    printb(b"%-18.9f %-16s %-6d %s" % (ts, task, pid, msg))
+    print("%-18.9f %-16s %-6d %s" % (ts, task, pid, msg))
