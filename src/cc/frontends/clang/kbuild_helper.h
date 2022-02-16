@@ -21,8 +21,6 @@
 #include <errno.h>
 #include <ftw.h>
 
-#define PROC_KHEADERS_PATH "/sys/kernel/kheaders.tar.xz"
-
 namespace ebpf {
 
 struct FileDeleter {
@@ -103,5 +101,4 @@ class KBuildHelper {
   bool has_source_dir_;
 };
 
-int get_proc_kheaders(std::string &dir);
 }  // namespace ebpf
