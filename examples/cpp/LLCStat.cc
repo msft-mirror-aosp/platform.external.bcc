@@ -42,10 +42,8 @@ int on_cache_miss(struct bpf_perf_event_data *ctx) {
     get_key(&key);
 
     u64 zero = 0, *val;
-    val = miss_count.lookup_or_try_init(&key, &zero);
-    if (val) {
-        (*val) += ctx->sample_period;
-    }
+    val = miss_count.lookup_or_init(&key, &zero);
+    (*val) += ctx->sample_period;
 
     return 0;
 }
@@ -55,10 +53,8 @@ int on_cache_ref(struct bpf_perf_event_data *ctx) {
     get_key(&key);
 
     u64 zero = 0, *val;
-    val = ref_count.lookup_or_try_init(&key, &zero);
-    if (val) {
-        (*val) += ctx->sample_period;
-    }
+    val = ref_count.lookup_or_init(&key, &zero);
+    (*val) += ctx->sample_period;
 
     return 0;
 }
@@ -73,7 +69,7 @@ struct event_t {
 int main(int argc, char** argv) {
   ebpf::BPF bpf;
   auto init_res = bpf.init(BPF_PROGRAM);
-  if (!init_res.ok()) {
+  if (init_res.code() != 0) {
     std::cerr << init_res.msg() << std::endl;
     return 1;
   }
@@ -81,13 +77,13 @@ int main(int argc, char** argv) {
   auto attach_ref_res =
       bpf.attach_perf_event(PERF_TYPE_HARDWARE, PERF_COUNT_HW_CACHE_REFERENCES,
                             "on_cache_ref", 100, 0);
-  if (!attach_ref_res.ok()) {
+  if (attach_ref_res.code() != 0) {
     std::cerr << attach_ref_res.msg() << std::endl;
     return 1;
   }
   auto attach_miss_res = bpf.attach_perf_event(
       PERF_TYPE_HARDWARE, PERF_COUNT_HW_CACHE_MISSES, "on_cache_miss", 100, 0);
-  if (!attach_miss_res.ok()) {
+  if (attach_miss_res.code() != 0) {
     std::cerr << attach_miss_res.msg() << std::endl;
     return 1;
   }

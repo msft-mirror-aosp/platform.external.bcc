@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 # @lint-avoid-python-3-compatibility-imports
 #
 # softirqs  Summarize soft IRQ (interrupt) event time.
@@ -54,11 +54,6 @@ debug = 0
 bpf_text = """
 #include <uapi/linux/ptrace.h>
 
-typedef struct entry_key {
-    u32 pid;
-    u32 cpu;
-} entry_key_t;
-
 typedef struct irq_key {
     u32 vec;
     u64 slot;
@@ -69,22 +64,17 @@ typedef struct account_val {
     u32 vec;
 } account_val_t;
 
-BPF_HASH(start, entry_key_t, account_val_t);
+BPF_HASH(start, u32, account_val_t);
 BPF_HASH(iptr, u32);
 BPF_HISTOGRAM(dist, irq_key_t);
 
 TRACEPOINT_PROBE(irq, softirq_entry)
 {
+    u32 pid = bpf_get_current_pid_tgid();
     account_val_t val = {};
-    entry_key_t key = {};
-
-    key.pid = bpf_get_current_pid_tgid();
-    key.cpu = bpf_get_smp_processor_id();
     val.ts = bpf_ktime_get_ns();
     val.vec = args->vec;
-
-    start.update(&key, &val);
-
+    start.update(&pid, &val);
     return 0;
 }
 
@@ -92,15 +82,12 @@ TRACEPOINT_PROBE(irq, softirq_exit)
 {
     u64 delta;
     u32 vec;
+    u32 pid = bpf_get_current_pid_tgid();
     account_val_t *valp;
     irq_key_t key = {0};
-    entry_key_t entry_key = {};
-
-    entry_key.pid = bpf_get_current_pid_tgid();
-    entry_key.cpu = bpf_get_smp_processor_id();
 
     // fetch timestamp and calculate delta
-    valp = start.lookup(&entry_key);
+    valp = start.lookup(&pid);
     if (valp == 0) {
         return 0;   // missed start
     }
@@ -110,7 +97,7 @@ TRACEPOINT_PROBE(irq, softirq_exit)
     // store as sum or histogram
     STORE
 
-    start.delete(&entry_key);
+    start.delete(&pid);
     return 0;
 }
 """
@@ -119,11 +106,11 @@ TRACEPOINT_PROBE(irq, softirq_exit)
 if args.dist:
     bpf_text = bpf_text.replace('STORE',
         'key.vec = vec; key.slot = bpf_log2l(delta / %d); ' % factor +
-        'dist.atomic_increment(key);')
+        'dist.increment(key);')
 else:
     bpf_text = bpf_text.replace('STORE',
         'key.vec = valp->vec; ' +
-        'dist.atomic_increment(key, delta);')
+        'dist.increment(key, delta);')
 if debug or args.ebpf:
     print(bpf_text)
     if args.ebpf:
