@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 # @lint-avoid-python-3-compatibility-imports
 #
 # btrfsdist  Summarize btrfs operation latency.
@@ -73,14 +73,11 @@ BPF_HISTOGRAM(dist, dist_key_t);
 // time operation
 int trace_entry(struct pt_regs *ctx)
 {
-    u64 pid_tgid = bpf_get_current_pid_tgid();
-    u32 pid = pid_tgid >> 32;
-    u32 tid = (u32)pid_tgid;
-
+    u32 pid = bpf_get_current_pid_tgid();
     if (FILTER_PID)
         return 0;
     u64 ts = bpf_ktime_get_ns();
-    start.update(&tid, &ts);
+    start.update(&pid, &ts);
     return 0;
 }
 
@@ -89,10 +86,7 @@ int trace_entry(struct pt_regs *ctx)
 // I do by checking file->f_op.
 int trace_read_entry(struct pt_regs *ctx, struct kiocb *iocb)
 {
-    u64 pid_tgid = bpf_get_current_pid_tgid();
-    u32 pid = pid_tgid >> 32;
-    u32 tid = (u32)pid_tgid;
-
+    u32 pid = bpf_get_current_pid_tgid();
     if (FILTER_PID)
         return 0;
 
@@ -102,7 +96,7 @@ int trace_read_entry(struct pt_regs *ctx, struct kiocb *iocb)
         return 0;
 
     u64 ts = bpf_ktime_get_ns();
-    start.update(&tid, &ts);
+    start.update(&pid, &ts);
     return 0;
 }
 
@@ -111,10 +105,8 @@ int trace_read_entry(struct pt_regs *ctx, struct kiocb *iocb)
 int trace_open_entry(struct pt_regs *ctx, struct inode *inode,
     struct file *file)
 {
-    u64 pid_tgid = bpf_get_current_pid_tgid();
-    u32 pid = pid_tgid >> 32;
-    u32 tid = (u32)pid_tgid;
-
+    u32 pid;
+    pid = bpf_get_current_pid_tgid();
     if (FILTER_PID)
         return 0;
 
@@ -123,19 +115,17 @@ int trace_open_entry(struct pt_regs *ctx, struct inode *inode,
         return 0;
 
     u64 ts = bpf_ktime_get_ns();
-    start.update(&tid, &ts);
+    start.update(&pid, &ts);
     return 0;
 }
 
 static int trace_return(struct pt_regs *ctx, const char *op)
 {
     u64 *tsp;
-    u64 pid_tgid = bpf_get_current_pid_tgid();
-    u32 pid = pid_tgid >> 32;
-    u32 tid = (u32)pid_tgid;
+    u32 pid = bpf_get_current_pid_tgid();
 
     // fetch timestamp and calculate delta
-    tsp = start.lookup(&tid);
+    tsp = start.lookup(&pid);
     if (tsp == 0) {
         return 0;   // missed start or filtered
     }
@@ -144,9 +134,9 @@ static int trace_return(struct pt_regs *ctx, const char *op)
     // store as histogram
     dist_key_t key = {.slot = bpf_log2l(delta)};
     __builtin_memcpy(&key.op, op, sizeof(key.op));
-    dist.atomic_increment(key);
+    dist.increment(key);
 
-    start.delete(&tid);
+    start.delete(&pid);
     return 0;
 }
 
