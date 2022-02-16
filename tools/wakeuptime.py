@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 #
 # wakeuptime    Summarize sleep to wakeup time by waker kernel stack
 #               For Linux, uses BCC, eBPF.
@@ -102,10 +102,8 @@ BPF_HASH(counts, struct key_t);
 BPF_HASH(start, u32);
 BPF_STACK_TRACE(stack_traces, STACK_STORAGE_SIZE);
 
-static int offcpu_sched_switch() {
-    u64 pid_tgid = bpf_get_current_pid_tgid();
-    u32 pid = pid_tgid >> 32;
-    u32 tid = (u32)pid_tgid;
+int offcpu(struct pt_regs *ctx) {
+    u32 pid = bpf_get_current_pid_tgid();
     struct task_struct *p = (struct task_struct *) bpf_get_current_task();
     u64 ts;
 
@@ -113,19 +111,18 @@ static int offcpu_sched_switch() {
         return 0;
 
     ts = bpf_ktime_get_ns();
-    start.update(&tid, &ts);
+    start.update(&pid, &ts);
     return 0;
 }
 
-static int wakeup(ARG0, struct task_struct *p) {
-    u32 pid = p->tgid;
-    u32 tid = p->pid;
+int waker(struct pt_regs *ctx, struct task_struct *p) {
+    u32 pid = p->pid;
     u64 delta, *tsp, ts;
 
-    tsp = start.lookup(&tid);
+    tsp = start.lookup(&pid);
     if (tsp == 0)
         return 0;        // missed start
-    start.delete(&tid);
+    start.delete(&pid);
 
     if (FILTER)
         return 0;
@@ -138,46 +135,14 @@ static int wakeup(ARG0, struct task_struct *p) {
 
     struct key_t key = {};
 
-    key.w_k_stack_id = stack_traces.get_stackid(ctx, 0);
-    bpf_probe_read_kernel(&key.target, sizeof(key.target), p->comm);
+    key.w_k_stack_id = stack_traces.get_stackid(ctx, BPF_F_REUSE_STACKID);
+    bpf_probe_read(&key.target, sizeof(key.target), p->comm);
     bpf_get_current_comm(&key.waker, sizeof(key.waker));
 
-    counts.atomic_increment(key, delta);
+    counts.increment(key, delta);
     return 0;
 }
 """
-
-bpf_text_kprobe = """
-int offcpu(struct pt_regs *ctx) {
-    return offcpu_sched_switch();
-}
-
-int waker(struct pt_regs *ctx, struct task_struct *p) {
-    return wakeup(ctx, p);
-}
-"""
-
-bpf_text_raw_tp = """
-RAW_TRACEPOINT_PROBE(sched_switch)
-{
-    // TP_PROTO(bool preempt, struct task_struct *prev, struct task_struct *next)
-    return offcpu_sched_switch();
-}
-
-RAW_TRACEPOINT_PROBE(sched_wakeup)
-{
-    // TP_PROTO(struct task_struct *p)
-    struct task_struct *p = (struct task_struct *)ctx->args[0];
-    return wakeup(ctx, p);
-}
-"""
-
-is_supported_raw_tp = BPF.support_raw_tracepoint()
-if is_supported_raw_tp:
-    bpf_text += bpf_text_raw_tp
-else:
-    bpf_text += bpf_text_kprobe
-
 if args.pid:
     filter = 'pid != %s' % args.pid
 elif args.useronly:
@@ -185,12 +150,6 @@ elif args.useronly:
 else:
     filter = '0'
 bpf_text = bpf_text.replace('FILTER', filter)
-
-if is_supported_raw_tp:
-    arg0 = 'struct bpf_raw_tracepoint_args *ctx'
-else:
-    arg0 = 'struct pt_regs *ctx'
-bpf_text = bpf_text.replace('ARG0', arg0)
 
 # set stack storage size
 bpf_text = bpf_text.replace('STACK_STORAGE_SIZE', str(args.stack_storage_size))
@@ -204,13 +163,12 @@ if debug or args.ebpf:
 
 # initialize BPF
 b = BPF(text=bpf_text)
-if not is_supported_raw_tp:
-    b.attach_kprobe(event="schedule", fn_name="offcpu")
-    b.attach_kprobe(event="try_to_wake_up", fn_name="waker")
-    matched = b.num_open_kprobes()
-    if matched == 0:
-        print("0 functions traced. Exiting.")
-        exit()
+b.attach_kprobe(event="schedule", fn_name="offcpu")
+b.attach_kprobe(event="try_to_wake_up", fn_name="waker")
+matched = b.num_open_kprobes()
+if matched == 0:
+    print("0 functions traced. Exiting.")
+    exit()
 
 # header
 if not folded:
