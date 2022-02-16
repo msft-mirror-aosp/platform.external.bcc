@@ -45,7 +45,6 @@ class TableDesc {
   TableDesc(const TableDesc &that)
       : name(that.name),
         fd(that.fd.dup()),
-        fake_fd(that.fake_fd),
         type(that.type),
         key_size(that.key_size),
         leaf_size(that.leaf_size),
@@ -62,8 +61,7 @@ class TableDesc {
 
  public:
   TableDesc()
-      : fake_fd(0),
-        type(0),
+      : type(0),
         key_size(0),
         leaf_size(0),
         max_entries(0),
@@ -90,7 +88,6 @@ class TableDesc {
 
   std::string name;
   FileDesc fd;
-  int fake_fd;
   int type;
   size_t key_size;  // sizes are in bytes
   size_t leaf_size;

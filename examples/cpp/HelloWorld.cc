@@ -8,7 +8,6 @@
 #include <iostream>
 #include <string>
 
-#include "bcc_version.h"
 #include "BPF.h"
 
 const std::string BPF_PROGRAM = R"(
@@ -21,7 +20,7 @@ int on_sys_clone(void *ctx) {
 int main() {
   ebpf::BPF bpf;
   auto init_res = bpf.init(BPF_PROGRAM);
-  if (!init_res.ok()) {
+  if (init_res.code() != 0) {
     std::cerr << init_res.msg() << std::endl;
     return 1;
   }
@@ -31,19 +30,17 @@ int main() {
   std::string clone_fnname = bpf.get_syscall_fnname("clone");
 
   auto attach_res = bpf.attach_kprobe(clone_fnname, "on_sys_clone");
-  if (!attach_res.ok()) {
+  if (attach_res.code() != 0) {
     std::cerr << attach_res.msg() << std::endl;
     return 1;
   }
-
-  std::cout << "Starting HelloWorld with BCC " << LIBBCC_VERSION << std::endl;
 
   while (true) {
     if (std::getline(pipe, line)) {
       std::cout << line << std::endl;
       // Detach the probe if we got at least one line.
       auto detach_res = bpf.detach_kprobe(clone_fnname);
-      if (!detach_res.ok()) {
+      if (detach_res.code() != 0) {
         std::cerr << detach_res.msg() << std::endl;
         return 1;
       }
