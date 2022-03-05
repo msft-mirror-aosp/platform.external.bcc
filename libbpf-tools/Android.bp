@@ -14,6 +14,16 @@
 // limitations under the License.
 //
 
+package {
+    // See: http://go/android-license-faq
+    // A large-scale-change added 'default_applicable_licenses' to import
+    // all of the 'license_kinds' from "external_bcc_license"
+    // to get the below license kinds:
+    //   SPDX-license-identifier-Apache-2.0
+    //   SPDX-license-identifier-GPL-2.0
+    default_applicable_licenses: ["external_bcc_license"],
+}
+
 cc_defaults {
     name: "bcc_bpf_defaults",
     compile_multilib: "first",
@@ -24,6 +34,7 @@ cc_defaults {
         "-fno-stack-protector",
         "-fno-unwind-tables",
         "-mcpu=generic",
+        "-Wno-pointer-arith",
         "-Wno-unused-command-line-argument",
         "-Wno-unused-parameter",
     ],
@@ -106,6 +117,26 @@ cc_defaults {
             enabled: false,
         },
     },
+}
+
+cc_object {
+    name: "bindsnoop.bpf.o",
+    srcs: ["bindsnoop.bpf.c"],
+    defaults: ["bcc_bpf_defaults"],
+}
+
+genrule {
+    name: "bindsnoop.skel.h",
+    srcs: [":bindsnoop.bpf.o"],
+    out: ["bindsnoop.skel.h"],
+    defaults: ["bpf_skeleton_hdr_defaults"],
+}
+
+cc_binary {
+    name: "bindsnoop",
+    srcs: ["bindsnoop.c"],
+    generated_headers:  ["bindsnoop.skel.h"],
+    defaults: ["bcc_binary_defaults"],
 }
 
 cc_object {
@@ -208,6 +239,29 @@ cc_binary {
         "uprobe_helpers.c",
     ],
     generated_headers:  ["funclatency.skel.h"],
+    defaults: ["bcc_binary_defaults"],
+}
+
+cc_object {
+    name: "gethostlatency.bpf.o",
+    srcs: ["gethostlatency.bpf.c"],
+    defaults: ["bcc_bpf_defaults"],
+}
+
+genrule {
+    name: "gethostlatency.skel.h",
+    srcs: [":gethostlatency.bpf.o"],
+    out: ["gethostlatency.skel.h"],
+    defaults: ["bpf_skeleton_hdr_defaults"],
+}
+
+cc_binary {
+    name: "gethostlatency",
+    srcs: [
+        "gethostlatency.c",
+        "uprobe_helpers.c",
+    ],
+    generated_headers: ["gethostlatency.skel.h"],
     defaults: ["bcc_binary_defaults"],
 }
 
@@ -351,5 +405,28 @@ cc_binary {
     name: "softirqs",
     srcs: ["softirqs.c"],
     generated_headers:  ["softirqs.skel.h"],
+    defaults: ["bcc_binary_defaults"],
+}
+
+cc_object {
+    name: "tcpconnect.bpf.o",
+    srcs: ["tcpconnect.bpf.c"],
+    defaults: ["bcc_bpf_defaults"],
+}
+
+genrule {
+    name: "tcpconnect.skel.h",
+    srcs: [":tcpconnect.bpf.o"],
+    out: ["tcpconnect.skel.h"],
+    defaults: ["bpf_skeleton_hdr_defaults"],
+}
+
+cc_binary {
+    name: "tcpconnect",
+    srcs: [
+        "map_helpers.c",
+        "tcpconnect.c",
+    ],
+    generated_headers:  ["tcpconnect.skel.h"],
     defaults: ["bcc_binary_defaults"],
 }
