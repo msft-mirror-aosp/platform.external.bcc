@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 # Copyright (c) PLUMgrid, Inc.
 # Licensed under the Apache License, Version 2.0 (the "License")
 
@@ -8,7 +8,6 @@
 
 import atexit
 from bcc import BPF
-from bcc.utils import printb
 import ctypes as ct
 
 class Data(ct.Structure):
@@ -51,10 +50,7 @@ def print_counter():
     global b
     print("counter = %d vs %d" % (counter, b["counters"][ct.c_int(0)].value))
 
-printb(b"Tracing " + event_name + b", try `dd if=/dev/zero of=/dev/null`")
+print("Tracing " + event_name + ", try `dd if=/dev/zero of=/dev/null`")
 print("Tracing... Hit Ctrl-C to end.")
 while 1:
-    try:
-        b.perf_buffer_poll()
-    except KeyboardInterrupt:
-        exit()
+    b.perf_buffer_poll()

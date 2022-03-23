@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 # @lint-avoid-python-3-compatibility-imports
 #
 # biotop  block device (disk) I/O by process.
@@ -18,6 +18,7 @@ from __future__ import print_function
 from bcc import BPF
 from time import sleep, strftime
 import argparse
+import signal
 from subprocess import call
 
 # arguments
@@ -51,16 +52,14 @@ clear = not int(args.noclear)
 loadavg = "/proc/loadavg"
 diskstats = "/proc/diskstats"
 
+# signal handler
+def signal_ignore(signal_value, frame):
+    print()
+
 # load BPF program
 bpf_text = """
 #include <uapi/linux/ptrace.h>
 #include <linux/blkdev.h>
-
-// for saving the timestamp and __data_len of each request
-struct start_req_t {
-    u64 ts;
-    u64 data_len;
-};
 
 // for saving process info by request
 struct who_t {
@@ -84,7 +83,7 @@ struct val_t {
     u32 io;
 };
 
-BPF_HASH(start, struct request *, struct start_req_t);
+BPF_HASH(start, struct request *);
 BPF_HASH(whobyreq, struct request *, struct who_t);
 BPF_HASH(counts, struct info_t, struct val_t);
 
@@ -94,7 +93,7 @@ int trace_pid_start(struct pt_regs *ctx, struct request *req)
     struct who_t who = {};
 
     if (bpf_get_current_comm(&who.name, sizeof(who.name)) == 0) {
-        who.pid = bpf_get_current_pid_tgid() >> 32;
+        who.pid = bpf_get_current_pid_tgid();
         whobyreq.update(&req, &who);
     }
 
@@ -104,28 +103,28 @@ int trace_pid_start(struct pt_regs *ctx, struct request *req)
 // time block I/O
 int trace_req_start(struct pt_regs *ctx, struct request *req)
 {
-    struct start_req_t start_req = {
-        .ts = bpf_ktime_get_ns(),
-        .data_len = req->__data_len
-    };
-    start.update(&req, &start_req);
+    u64 ts;
+
+    ts = bpf_ktime_get_ns();
+    start.update(&req, &ts);
+
     return 0;
 }
 
 // output
 int trace_req_completion(struct pt_regs *ctx, struct request *req)
 {
-    struct start_req_t *startp;
+    u64 *tsp;
 
     // fetch timestamp and calculate delta
-    startp = start.lookup(&req);
-    if (startp == 0) {
+    tsp = start.lookup(&req);
+    if (tsp == 0) {
         return 0;    // missed tracing issue
     }
 
     struct who_t *whop;
     struct val_t *valp, zero = {};
-    u64 delta_us = (bpf_ktime_get_ns() - startp->ts) / 1000;
+    u64 delta_us = (bpf_ktime_get_ns() - *tsp) / 1000;
 
     // setup info_t key
     struct info_t info = {};
@@ -149,19 +148,17 @@ int trace_req_completion(struct pt_regs *ctx, struct request *req)
     whop = whobyreq.lookup(&req);
     if (whop == 0) {
         // missed pid who, save stats as pid 0
-        valp = counts.lookup_or_try_init(&info, &zero);
+        valp = counts.lookup_or_init(&info, &zero);
     } else {
         info.pid = whop->pid;
         __builtin_memcpy(&info.name, whop->name, sizeof(info.name));
-        valp = counts.lookup_or_try_init(&info, &zero);
+        valp = counts.lookup_or_init(&info, &zero);
     }
 
-    if (valp) {
-        // save stats
-        valp->us += delta_us;
-        valp->bytes += startp->data_len;
-        valp->io++;
-    }
+    // save stats
+    valp->us += delta_us;
+    valp->bytes += req->__data_len;
+    valp->io++;
 
     start.delete(&req);
     whobyreq.delete(&req);
@@ -175,17 +172,12 @@ if args.ebpf:
     exit()
 
 b = BPF(text=bpf_text)
-if BPF.get_kprobe_functions(b'__blk_account_io_start'):
-    b.attach_kprobe(event="__blk_account_io_start", fn_name="trace_pid_start")
-else:
-    b.attach_kprobe(event="blk_account_io_start", fn_name="trace_pid_start")
+b.attach_kprobe(event="blk_account_io_start", fn_name="trace_pid_start")
 if BPF.get_kprobe_functions(b'blk_start_request'):
     b.attach_kprobe(event="blk_start_request", fn_name="trace_req_start")
 b.attach_kprobe(event="blk_mq_start_request", fn_name="trace_req_start")
-if BPF.get_kprobe_functions(b'__blk_account_io_done'):
-    b.attach_kprobe(event="__blk_account_io_done", fn_name="trace_req_completion")
-else:
-    b.attach_kprobe(event="blk_account_io_done", fn_name="trace_req_completion")
+b.attach_kprobe(event="blk_account_io_completion",
+    fn_name="trace_req_completion")
 
 print('Tracing... Output every %d secs. Hit Ctrl-C to end' % interval)
 
