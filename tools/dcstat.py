@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 # @lint-avoid-python-3-compatibility-imports
 #
 # dcstat   Directory entry cache (dcache) stats.
@@ -73,22 +73,25 @@ BPF_ARRAY(stats, u64, S_MAXSTAT);
  */
 void count_fast(struct pt_regs *ctx) {
     int key = S_REFS;
-    stats.atomic_increment(key);
+    u64 *leaf = stats.lookup(&key);
+    if (leaf) (*leaf)++;
 }
 
 void count_lookup(struct pt_regs *ctx) {
     int key = S_SLOW;
-    stats.atomic_increment(key);
+    u64 *leaf = stats.lookup(&key);
+    if (leaf) (*leaf)++;
     if (PT_REGS_RC(ctx) == 0) {
         key = S_MISS;
-        stats.atomic_increment(key);
+        leaf = stats.lookup(&key);
+        if (leaf) (*leaf)++;
     }
 }
 """
 
 # load BPF program
 b = BPF(text=bpf_text)
-b.attach_kprobe(event_re="^lookup_fast$|^lookup_fast.constprop.*.\d$", fn_name="count_fast")
+b.attach_kprobe(event="lookup_fast", fn_name="count_fast")
 b.attach_kretprobe(event="d_lookup", fn_name="count_lookup")
 
 # stat column labels and indexes
@@ -114,6 +117,7 @@ while (1):
     try:
         sleep(interval)
     except KeyboardInterrupt:
+        pass
         exit()
 
     print("%-8s: " % strftime("%H:%M:%S"), end="")
