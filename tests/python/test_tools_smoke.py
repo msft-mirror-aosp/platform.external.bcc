@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 # Copyright (c) Sasha Goldshtein, 2017
 # Licensed under the Apache License, Version 2.0 (the "License")
 
@@ -7,27 +7,19 @@ import subprocess
 import os
 import re
 from unittest import main, skipUnless, TestCase
-from utils import mayFail, kernel_version_ge
 
-TOOLS_DIR = "/bcc/tools/"
+TOOLS_DIR = "../../tools/"
 
-def _helpful_rc_msg(rc, allow_early, kill):
-    s = "rc was %d\n" % rc
-    if rc == 0:
-        s += "\tMeaning: command returned successfully before test timeout\n"
-    elif rc == 124:
-        s += "\tMeaning: command was killed by INT signal\n"
-    elif rc == 137:
-        s += "\tMeaning: command was killed by KILL signal\n"
-
-    s += "Command was expected to do one of:\n"
-    s += "\tBe killed by SIGINT\n"
-    if kill:
-        s += "\tBe killed by SIGKILL\n"
-    if allow_early:
-        s += "\tSuccessfully return before being killed\n"
-
-    return s
+def kernel_version_ge(major, minor):
+    # True if running kernel is >= X.Y
+    version = distutils.version.LooseVersion(os.uname()[2]).version
+    if version[0] > major:
+        return True
+    if version[0] < major:
+        return False
+    if minor and version[1] < minor:
+        return False
+    return True
 
 @skipUnless(kernel_version_ge(4,1), "requires kernel >= 4.1")
 class SmokeTests(TestCase):
@@ -57,8 +49,7 @@ class SmokeTests(TestCase):
         #   3. The script timed out and was killed by the SIGKILL signal, and
         #      this was what we asked for using kill=True.
         self.assertTrue((rc == 0 and allow_early) or rc == 124
-                        or (rc == 137 and kill), _helpful_rc_msg(rc,
-                        allow_early, kill))
+                        or (rc == 137 and kill), "rc was %d" % rc)
 
     def kmod_loaded(self, mod):
         with open("/proc/modules", "r") as mods:
@@ -74,17 +65,12 @@ class SmokeTests(TestCase):
     def tearDown(self):
         pass
 
-    @mayFail("This fails on github actions environment, and needs to be fixed")
     def test_argdist(self):
         self.run_with_duration("argdist.py -v -C 'p::do_sys_open()' -n 1 -i 1")
 
     @skipUnless(kernel_version_ge(4,4), "requires kernel >= 4.4")
     def test_bashreadline(self):
         self.run_with_int("bashreadline.py")
-
-    @skipUnless(kernel_version_ge(4,4), "requires kernel >= 4.4")
-    def test_bindsnoop(self):
-        self.run_with_int("bindsnoop.py")
 
     def test_biolatency(self):
         self.run_with_duration("biolatency.py 1 1")
@@ -131,10 +117,6 @@ class SmokeTests(TestCase):
     def test_cpuunclaimed(self):
         self.run_with_duration("cpuunclaimed.py 1 1")
 
-    @skipUnless(kernel_version_ge(4,17), "requires kernel >= 4.17")
-    def test_compactsnoop(self):
-        self.run_with_int("compactsnoop.py")
-
     @skipUnless(kernel_version_ge(4,4), "requires kernel >= 4.4")
     def test_dbslower(self):
         # Deliberately left empty -- dbslower requires an instance of either
@@ -155,16 +137,12 @@ class SmokeTests(TestCase):
         self.run_with_duration("dcstat.py 1 1")
 
     @skipUnless(kernel_version_ge(4,6), "requires kernel >= 4.6")
-    def test_deadlock(self):
+    def test_deadlock_detector(self):
         # TODO This tool requires a massive BPF stack traces table allocation,
         # which might fail the run or even trigger the oomkiller to kill some
         # other processes. Disabling for now.
-        # self.run_with_int("deadlock.py $(pgrep -n bash)", timeout=10)
+        # self.run_with_int("deadlock_detector.py $(pgrep -n bash)", timeout=10)
         pass
-
-    @skipUnless(kernel_version_ge(4,7), "requires kernel >= 4.7")
-    def test_drsnoop(self):
-        self.run_with_int("drsnoop.py")
 
     @skipUnless(kernel_version_ge(4,8), "requires kernel >= 4.8")
     def test_execsnoop(self):
@@ -203,7 +181,6 @@ class SmokeTests(TestCase):
     def test_gethostlatency(self):
         self.run_with_int("gethostlatency.py")
 
-    @skipUnless(kernel_version_ge(4,7), "requires kernel >= 4.7")
     def test_hardirqs(self):
         self.run_with_duration("hardirqs.py 1 1")
 
@@ -217,10 +194,6 @@ class SmokeTests(TestCase):
         # `kill -s SIGINT $(pidof python)`. As a result, killsnoop will print
         # a traceback but will not exit.
         self.run_with_int("killsnoop.py", kill=True)
-
-    @skipUnless(kernel_version_ge(4,18), "requires kernel >= 4.18")
-    def test_klockstat(self):
-        self.run_with_int("klockstat.py")
 
     @skipUnless(kernel_version_ge(4,9), "requires kernel >= 4.9")
     def test_llcstat(self):
@@ -310,7 +283,6 @@ class SmokeTests(TestCase):
         self.run_with_int("solisten.py")
 
     @skipUnless(kernel_version_ge(4,4), "requires kernel >= 4.4")
-    @mayFail("This fails on github actions environment, and needs to be fixed")
     def test_sslsniff(self):
         self.run_with_int("sslsniff.py")
 
@@ -351,7 +323,6 @@ class SmokeTests(TestCase):
         self.run_with_int("tcpretrans.py")
 
     @skipUnless(kernel_version_ge(4, 7), "requires kernel >= 4.7")
-    @mayFail("This fails on github actions environment, and needs to be fixed")
     def test_tcpdrop(self):
         self.run_with_int("tcpdrop.py")
 
@@ -366,7 +337,6 @@ class SmokeTests(TestCase):
         self.run_with_int("trace.py do_sys_open")
 
     @skipUnless(kernel_version_ge(4,4), "requires kernel >= 4.4")
-    @mayFail("This fails on github actions environment, and needs to be fixed")
     def test_ttysnoop(self):
         self.run_with_int("ttysnoop.py /dev/console")
 
