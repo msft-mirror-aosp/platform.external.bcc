@@ -13,11 +13,14 @@ struct FwdLeaf {
 BPF_HASH(fwd_map, struct FwdKey, struct FwdLeaf, 1);
 
 // array
+struct ConfigKey {
+  u32 index;
+};
 struct ConfigLeaf {
   u32 bpfdev_ip;
   u32 slave_ip;
 };
-BPF_TABLE("array", u32, struct ConfigLeaf, config_map, 1);
+BPF_TABLE("array", struct ConfigKey, struct ConfigLeaf, config_map, 1);
 
 // hash
 struct MacaddrKey {
@@ -46,7 +49,7 @@ int handle_packet(struct __sk_buff *skb) {
     // make sure configured
     u32 slave_ip;
 
-    u32 cfg_key = 0;
+    struct ConfigKey cfg_key = {.index = 0};
     struct ConfigLeaf *cfg_leaf = config_map.lookup(&cfg_key);
     if (cfg_leaf) {
       slave_ip = cfg_leaf->slave_ip;
@@ -129,7 +132,7 @@ int handle_packet(struct __sk_buff *skb) {
       u64 src_mac;
       u64 dst_mac;
 
-      u32 cfg_key = 0;
+      struct ConfigKey cfg_key = {.index = 0};
       struct ConfigLeaf *cfg_leaf = config_map.lookup(&cfg_key);
       if (cfg_leaf) {
         struct MacaddrKey mac_key = {.ip = cfg_leaf->bpfdev_ip};
