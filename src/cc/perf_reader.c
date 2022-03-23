@@ -25,7 +25,6 @@
 #include <sys/mman.h>
 #include <sys/types.h>
 #include <unistd.h>
-#include <linux/types.h>
 #include <linux/perf_event.h>
 
 #include "libbpf.h"

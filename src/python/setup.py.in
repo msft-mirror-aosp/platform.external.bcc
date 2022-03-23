@@ -4,8 +4,7 @@ from distutils.core import setup
 import os
 import sys
 
-# sdist does not support --root.
-if "sdist" not in sys.argv and os.environ.get('DESTDIR'):
+if os.environ.get('DESTDIR'):
     sys.argv += ['--root', os.environ['DESTDIR']]
 
 setup(name='bcc',
