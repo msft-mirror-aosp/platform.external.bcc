@@ -12,26 +12,11 @@ trap cleanup EXIT
 
 mkdir $TMP/{BUILD,RPMS,SOURCES,SPECS,SRPMS}
 
-llvmver=7.0.1
-
-# populate submodules
-git submodule update --init --recursive
+llvmver=3.7.1
 
 . scripts/git-tag.sh
 
-git archive HEAD --prefix=bcc/ --format=tar -o $TMP/SOURCES/bcc.tar
-
-# archive submodules
-pushd src/cc/libbpf
-git archive HEAD --prefix=bcc/src/cc/libbpf/ --format=tar -o $TMP/SOURCES/bcc_libbpf.tar
-popd
-
-# merge all archives into $git_tag_latest.tar.gz
-pushd $TMP/SOURCES
-tar -A -f bcc.tar bcc_libbpf.tar
-gzip -c bcc.tar > $git_tag_latest.tar.gz
-popd
-
+git archive HEAD --prefix=bcc/ --format=tar.gz -o $TMP/SOURCES/$git_tag_latest.tar.gz
 wget -P $TMP/SOURCES http://llvm.org/releases/$llvmver/{cfe,llvm}-$llvmver.src.tar.xz
 
 sed \
