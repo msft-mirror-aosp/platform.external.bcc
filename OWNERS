@@ -1,4 +1,5 @@
-connoro@google.com
-
-# backup in case connoro@ is unavailable
-surenb@google.com
+# Default owners are top 3 active developers of the past 1 or 2 years
+# or people with more than 10 commits last year.
+# Please update this list if you find better owner candidates.
+joelaf@google.com
+jcanseco@google.com
