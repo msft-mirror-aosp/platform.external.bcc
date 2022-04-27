@@ -61,7 +61,7 @@ extern "C" error_t argp_parse(const struct argp *argp, int argc, char **argv, in
     // Handle positional arguments
     if (optind < argc) {
         for (int idx = optind; idx < argc; idx++) {
-            struct argp_state state = { .input = input, .argp = argp, .arg_num = idx };
+            struct argp_state state = { .input = input, .argp = argp, .arg_num = idx - optind };
             const error_t ret = argp->parser(ARGP_KEY_ARG, argv[idx], &state);
             if (ret) return ret;
         }
