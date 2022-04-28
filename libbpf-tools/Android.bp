@@ -180,6 +180,26 @@ cc_binary {
 }
 
 cc_object {
+    name: "drsnoop.bpf.o",
+    srcs: ["drsnoop.bpf.c"],
+    defaults: ["bcc_bpf_defaults"],
+}
+
+genrule {
+    name: "drsnoop.skel.h",
+    srcs: [":drsnoop.bpf.o"],
+    out: ["drsnoop.skel.h"],
+    defaults: ["bpf_skeleton_hdr_defaults"],
+}
+
+cc_binary {
+    name: "drsnoop",
+    srcs: ["drsnoop.c"],
+    generated_headers:  ["drsnoop.skel.h"],
+    defaults: ["bcc_binary_defaults"],
+}
+
+cc_object {
     name: "filelife.bpf.o",
     srcs: ["filelife.bpf.c"],
     defaults: ["bcc_bpf_defaults"],
@@ -216,6 +236,46 @@ cc_binary {
     name: "filetop",
     srcs: ["filetop.c"],
     generated_headers:  ["filetop.skel.h"],
+    defaults: ["bcc_binary_defaults"],
+}
+
+cc_object {
+    name: "fsdist.bpf.o",
+    srcs: ["fsdist.bpf.c"],
+    defaults: ["bcc_bpf_defaults"],
+}
+
+genrule {
+    name: "fsdist.skel.h",
+    srcs: [":fsdist.bpf.o"],
+    out: ["fsdist.skel.h"],
+    defaults: ["bpf_skeleton_hdr_defaults"],
+}
+
+cc_binary {
+    name: "fsdist",
+    srcs: ["fsdist.c"],
+    generated_headers:  ["fsdist.skel.h"],
+    defaults: ["bcc_binary_defaults"],
+}
+
+cc_object {
+    name: "fsslower.bpf.o",
+    srcs: ["fsslower.bpf.c"],
+    defaults: ["bcc_bpf_defaults"],
+}
+
+genrule {
+    name: "fsslower.skel.h",
+    srcs: [":fsslower.bpf.o"],
+    out: ["fsslower.skel.h"],
+    defaults: ["bpf_skeleton_hdr_defaults"],
+}
+
+cc_binary {
+    name: "fsslower",
+    srcs: ["fsslower.c"],
+    generated_headers:  ["fsslower.skel.h"],
     defaults: ["bcc_binary_defaults"],
 }
 
@@ -329,6 +389,26 @@ cc_binary {
 }
 
 cc_object {
+    name: "oomkill.bpf.o",
+    srcs: ["oomkill.bpf.c"],
+    defaults: ["bcc_bpf_defaults"],
+}
+
+genrule {
+    name: "oomkill.skel.h",
+    srcs: [":oomkill.bpf.o"],
+    out: ["oomkill.skel.h"],
+    defaults: ["bpf_skeleton_hdr_defaults"],
+}
+
+cc_binary {
+    name: "oomkill",
+    srcs: ["oomkill.c"],
+    generated_headers:  ["oomkill.skel.h"],
+    defaults: ["bcc_binary_defaults"],
+}
+
+cc_object {
     name: "runqlat.bpf.o",
     srcs: ["runqlat.bpf.c"],
     defaults: ["bcc_bpf_defaults"],
@@ -409,6 +489,26 @@ cc_binary {
 }
 
 cc_object {
+    name: "solisten.bpf.o",
+    srcs: ["solisten.bpf.c"],
+    defaults: ["bcc_bpf_defaults"],
+}
+
+genrule {
+    name: "solisten.skel.h",
+    srcs: [":solisten.bpf.o"],
+    out: ["solisten.skel.h"],
+    defaults: ["bpf_skeleton_hdr_defaults"],
+}
+
+cc_binary {
+    name: "solisten",
+    srcs: ["solisten.c"],
+    generated_headers:  ["solisten.skel.h"],
+    defaults: ["bcc_binary_defaults"],
+}
+
+cc_object {
     name: "tcpconnect.bpf.o",
     srcs: ["tcpconnect.bpf.c"],
     defaults: ["bcc_bpf_defaults"],
@@ -428,5 +528,45 @@ cc_binary {
         "tcpconnect.c",
     ],
     generated_headers:  ["tcpconnect.skel.h"],
+    defaults: ["bcc_binary_defaults"],
+}
+
+cc_object {
+    name: "tcprtt.bpf.o",
+    srcs: ["tcprtt.bpf.c"],
+    defaults: ["bcc_bpf_defaults"],
+}
+
+genrule {
+    name: "tcprtt.skel.h",
+    srcs: [":tcprtt.bpf.o"],
+    out: ["tcprtt.skel.h"],
+    defaults: ["bpf_skeleton_hdr_defaults"],
+}
+
+cc_binary {
+    name: "tcprtt",
+    srcs: ["tcprtt.c"],
+    generated_headers:  ["tcprtt.skel.h"],
+    defaults: ["bcc_binary_defaults"],
+}
+
+cc_object {
+    name: "vfsstat.bpf.o",
+    srcs: ["vfsstat.bpf.c"],
+    defaults: ["bcc_bpf_defaults"],
+}
+
+genrule {
+    name: "vfsstat.skel.h",
+    srcs: [":vfsstat.bpf.o"],
+    out: ["vfsstat.skel.h"],
+    defaults: ["bpf_skeleton_hdr_defaults"],
+}
+
+cc_binary {
+    name: "vfsstat",
+    srcs: ["vfsstat.c"],
+    generated_headers:  ["vfsstat.skel.h"],
     defaults: ["bcc_binary_defaults"],
 }
