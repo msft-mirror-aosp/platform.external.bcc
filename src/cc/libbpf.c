@@ -289,7 +289,15 @@ static struct bpf_helper helpers[] = {
   {"strncmp", "5.17"},
   {"get_func_arg", "5.17"},
   {"get_func_ret", "5.17"},
-  {"get_func_arg_cnt", "5.17"},
+  {"get_func_ret", "5.17"},
+  {"get_retval", "5.18"},
+  {"set_retval", "5.18"},
+  {"xdp_get_buff_len", "5.18"},
+  {"xdp_load_bytes", "5.18"},
+  {"xdp_store_bytes", "5.18"},
+  {"copy_from_user_task", "5.18"},
+  {"skb_set_tstamp", "5.18"},
+  {"ima_file_hash", "5.18"},
 };
 
 static uint64_t ptr_to_u64(void *ptr)
@@ -1386,7 +1394,16 @@ int bpf_attach_raw_tracepoint(int progfd, const char *tp_name)
 #ifndef MINIMAL_LIBBPF
 bool bpf_has_kernel_btf(void)
 {
-  return libbpf_find_vmlinux_btf_id("bpf_prog_put", 0) > 0;
+  struct btf *btf;
+  int err;
+
+  btf = btf__parse_raw("/sys/kernel/btf/vmlinux");
+  err = libbpf_get_error(btf);
+  if (err)
+    return false;
+
+  btf__free(btf);
+  return true;
 }
 
 int kernel_struct_has_field(const char *struct_name, const char *field_name)
