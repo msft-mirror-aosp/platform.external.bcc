@@ -26,6 +26,8 @@ lib.bpf_module_create_c.argtypes = [ct.c_char_p, ct.c_uint,
 lib.bpf_module_create_c_from_string.restype = ct.c_void_p
 lib.bpf_module_create_c_from_string.argtypes = [ct.c_char_p, ct.c_uint,
         ct.POINTER(ct.c_char_p), ct.c_int, ct.c_bool, ct.c_char_p]
+lib.bpf_module_rw_engine_enabled.restype = ct.c_bool
+lib.bpf_module_rw_engine_enabled.argtypes = None
 lib.bpf_module_destroy.restype = None
 lib.bpf_module_destroy.argtypes = [ct.c_void_p]
 lib.bpf_module_license.restype = ct.c_char_p
@@ -147,6 +149,8 @@ lib.bpf_open_perf_event.restype = ct.c_int
 lib.bpf_open_perf_event.argtypes = [ct.c_uint, ct.c_ulonglong, ct.c_int, ct.c_int]
 lib.perf_reader_poll.restype = ct.c_int
 lib.perf_reader_poll.argtypes = [ct.c_int, ct.POINTER(ct.c_void_p), ct.c_int]
+lib.perf_reader_consume.restype = ct.c_int
+lib.perf_reader_consume.argtypes = [ct.c_int, ct.POINTER(ct.c_void_p)]
 lib.perf_reader_free.restype = None
 lib.perf_reader_free.argtypes = [ct.c_void_p]
 lib.perf_reader_fd.restype = int
