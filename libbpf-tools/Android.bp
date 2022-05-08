@@ -14,6 +14,16 @@
 // limitations under the License.
 //
 
+package {
+    // See: http://go/android-license-faq
+    // A large-scale-change added 'default_applicable_licenses' to import
+    // all of the 'license_kinds' from "external_bcc_license"
+    // to get the below license kinds:
+    //   SPDX-license-identifier-Apache-2.0
+    //   SPDX-license-identifier-GPL-2.0
+    default_applicable_licenses: ["external_bcc_license"],
+}
+
 cc_defaults {
     name: "bcc_bpf_defaults",
     compile_multilib: "first",
@@ -24,6 +34,7 @@ cc_defaults {
         "-fno-stack-protector",
         "-fno-unwind-tables",
         "-mcpu=generic",
+        "-Wno-pointer-arith",
         "-Wno-unused-command-line-argument",
         "-Wno-unused-parameter",
     ],
@@ -109,6 +120,26 @@ cc_defaults {
 }
 
 cc_object {
+    name: "bindsnoop.bpf.o",
+    srcs: ["bindsnoop.bpf.c"],
+    defaults: ["bcc_bpf_defaults"],
+}
+
+genrule {
+    name: "bindsnoop.skel.h",
+    srcs: [":bindsnoop.bpf.o"],
+    out: ["bindsnoop.skel.h"],
+    defaults: ["bpf_skeleton_hdr_defaults"],
+}
+
+cc_binary {
+    name: "bindsnoop",
+    srcs: ["bindsnoop.c"],
+    generated_headers:  ["bindsnoop.skel.h"],
+    defaults: ["bcc_binary_defaults"],
+}
+
+cc_object {
     name: "cpudist.bpf.o",
     srcs: ["cpudist.bpf.c"],
     defaults: ["bcc_bpf_defaults"],
@@ -145,6 +176,26 @@ cc_binary {
     name: "cpufreq",
     srcs: ["cpufreq.c"],
     generated_headers:  ["cpufreq.skel.h"],
+    defaults: ["bcc_binary_defaults"],
+}
+
+cc_object {
+    name: "drsnoop.bpf.o",
+    srcs: ["drsnoop.bpf.c"],
+    defaults: ["bcc_bpf_defaults"],
+}
+
+genrule {
+    name: "drsnoop.skel.h",
+    srcs: [":drsnoop.bpf.o"],
+    out: ["drsnoop.skel.h"],
+    defaults: ["bpf_skeleton_hdr_defaults"],
+}
+
+cc_binary {
+    name: "drsnoop",
+    srcs: ["drsnoop.c"],
+    generated_headers:  ["drsnoop.skel.h"],
     defaults: ["bcc_binary_defaults"],
 }
 
@@ -189,6 +240,46 @@ cc_binary {
 }
 
 cc_object {
+    name: "fsdist.bpf.o",
+    srcs: ["fsdist.bpf.c"],
+    defaults: ["bcc_bpf_defaults"],
+}
+
+genrule {
+    name: "fsdist.skel.h",
+    srcs: [":fsdist.bpf.o"],
+    out: ["fsdist.skel.h"],
+    defaults: ["bpf_skeleton_hdr_defaults"],
+}
+
+cc_binary {
+    name: "fsdist",
+    srcs: ["fsdist.c"],
+    generated_headers:  ["fsdist.skel.h"],
+    defaults: ["bcc_binary_defaults"],
+}
+
+cc_object {
+    name: "fsslower.bpf.o",
+    srcs: ["fsslower.bpf.c"],
+    defaults: ["bcc_bpf_defaults"],
+}
+
+genrule {
+    name: "fsslower.skel.h",
+    srcs: [":fsslower.bpf.o"],
+    out: ["fsslower.skel.h"],
+    defaults: ["bpf_skeleton_hdr_defaults"],
+}
+
+cc_binary {
+    name: "fsslower",
+    srcs: ["fsslower.c"],
+    generated_headers:  ["fsslower.skel.h"],
+    defaults: ["bcc_binary_defaults"],
+}
+
+cc_object {
     name: "funclatency.bpf.o",
     srcs: ["funclatency.bpf.c"],
     defaults: ["bcc_bpf_defaults"],
@@ -208,6 +299,29 @@ cc_binary {
         "uprobe_helpers.c",
     ],
     generated_headers:  ["funclatency.skel.h"],
+    defaults: ["bcc_binary_defaults"],
+}
+
+cc_object {
+    name: "gethostlatency.bpf.o",
+    srcs: ["gethostlatency.bpf.c"],
+    defaults: ["bcc_bpf_defaults"],
+}
+
+genrule {
+    name: "gethostlatency.skel.h",
+    srcs: [":gethostlatency.bpf.o"],
+    out: ["gethostlatency.skel.h"],
+    defaults: ["bpf_skeleton_hdr_defaults"],
+}
+
+cc_binary {
+    name: "gethostlatency",
+    srcs: [
+        "gethostlatency.c",
+        "uprobe_helpers.c",
+    ],
+    generated_headers: ["gethostlatency.skel.h"],
     defaults: ["bcc_binary_defaults"],
 }
 
@@ -271,6 +385,26 @@ cc_binary {
         "uprobe_helpers.c",
     ],
     generated_headers:  ["offcputime.skel.h"],
+    defaults: ["bcc_binary_defaults"],
+}
+
+cc_object {
+    name: "oomkill.bpf.o",
+    srcs: ["oomkill.bpf.c"],
+    defaults: ["bcc_bpf_defaults"],
+}
+
+genrule {
+    name: "oomkill.skel.h",
+    srcs: [":oomkill.bpf.o"],
+    out: ["oomkill.skel.h"],
+    defaults: ["bpf_skeleton_hdr_defaults"],
+}
+
+cc_binary {
+    name: "oomkill",
+    srcs: ["oomkill.c"],
+    generated_headers:  ["oomkill.skel.h"],
     defaults: ["bcc_binary_defaults"],
 }
 
@@ -351,5 +485,88 @@ cc_binary {
     name: "softirqs",
     srcs: ["softirqs.c"],
     generated_headers:  ["softirqs.skel.h"],
+    defaults: ["bcc_binary_defaults"],
+}
+
+cc_object {
+    name: "solisten.bpf.o",
+    srcs: ["solisten.bpf.c"],
+    defaults: ["bcc_bpf_defaults"],
+}
+
+genrule {
+    name: "solisten.skel.h",
+    srcs: [":solisten.bpf.o"],
+    out: ["solisten.skel.h"],
+    defaults: ["bpf_skeleton_hdr_defaults"],
+}
+
+cc_binary {
+    name: "solisten",
+    srcs: ["solisten.c"],
+    generated_headers:  ["solisten.skel.h"],
+    defaults: ["bcc_binary_defaults"],
+}
+
+cc_object {
+    name: "tcpconnect.bpf.o",
+    srcs: ["tcpconnect.bpf.c"],
+    defaults: ["bcc_bpf_defaults"],
+}
+
+genrule {
+    name: "tcpconnect.skel.h",
+    srcs: [":tcpconnect.bpf.o"],
+    out: ["tcpconnect.skel.h"],
+    defaults: ["bpf_skeleton_hdr_defaults"],
+}
+
+cc_binary {
+    name: "tcpconnect",
+    srcs: [
+        "map_helpers.c",
+        "tcpconnect.c",
+    ],
+    generated_headers:  ["tcpconnect.skel.h"],
+    defaults: ["bcc_binary_defaults"],
+}
+
+cc_object {
+    name: "tcprtt.bpf.o",
+    srcs: ["tcprtt.bpf.c"],
+    defaults: ["bcc_bpf_defaults"],
+}
+
+genrule {
+    name: "tcprtt.skel.h",
+    srcs: [":tcprtt.bpf.o"],
+    out: ["tcprtt.skel.h"],
+    defaults: ["bpf_skeleton_hdr_defaults"],
+}
+
+cc_binary {
+    name: "tcprtt",
+    srcs: ["tcprtt.c"],
+    generated_headers:  ["tcprtt.skel.h"],
+    defaults: ["bcc_binary_defaults"],
+}
+
+cc_object {
+    name: "vfsstat.bpf.o",
+    srcs: ["vfsstat.bpf.c"],
+    defaults: ["bcc_bpf_defaults"],
+}
+
+genrule {
+    name: "vfsstat.skel.h",
+    srcs: [":vfsstat.bpf.o"],
+    out: ["vfsstat.skel.h"],
+    defaults: ["bpf_skeleton_hdr_defaults"],
+}
+
+cc_binary {
+    name: "vfsstat",
+    srcs: ["vfsstat.c"],
+    generated_headers:  ["vfsstat.skel.h"],
     defaults: ["bcc_binary_defaults"],
 }
