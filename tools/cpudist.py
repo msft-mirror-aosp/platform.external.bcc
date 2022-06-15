@@ -1,19 +1,15 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 # @lint-avoid-python-3-compatibility-imports
 #
 # cpudist   Summarize on- and off-CPU time per task as a histogram.
 #
-# USAGE: cpudist [-h] [-O] [-T] [-m] [-P] [-L] [-p PID] [-I] [interval] [count]
+# USAGE: cpudist [-h] [-O] [-T] [-m] [-P] [-L] [-p PID] [interval] [count]
 #
 # This measures the time a task spends on or off the CPU, and shows this time
 # as a histogram, optionally per-process.
 #
-# By default CPU idle time are excluded by simply excluding PID 0.
-#
 # Copyright 2016 Sasha Goldshtein
 # Licensed under the Apache License, Version 2.0 (the "License")
-#
-# 27-Mar-2022   Rocky Xing      Changed to exclude CPU idle time by default.
 
 from __future__ import print_function
 from bcc import BPF
@@ -27,7 +23,6 @@ examples = """examples:
     cpudist -mT 1        # 1s summaries, milliseconds, and timestamps
     cpudist -P           # show each PID separately
     cpudist -p 185       # trace PID 185 only
-    cpudist -I           # include CPU idle time
 """
 parser = argparse.ArgumentParser(
     description="Summarize on-CPU time per task as a histogram.",
@@ -45,8 +40,6 @@ parser.add_argument("-L", "--tids", action="store_true",
     help="print a histogram per thread ID")
 parser.add_argument("-p", "--pid",
     help="trace this PID only")
-parser.add_argument("-I", "--include-idle", action="store_true",
-    help="include CPU idle time")
 parser.add_argument("interval", nargs="?", default=99999999,
     help="output interval, in seconds")
 parser.add_argument("count", nargs="?", default=99999999,
@@ -65,42 +58,29 @@ if not args.offcpu:
     bpf_text += "#define ONCPU\n"
 
 bpf_text += """
-typedef struct entry_key {
-    u32 pid;
-    u32 cpu;
-} entry_key_t;
-
 typedef struct pid_key {
     u64 id;
     u64 slot;
 } pid_key_t;
 
 
-BPF_HASH(start, entry_key_t, u64, MAX_PID);
+BPF_HASH(start, u32, u64);
 STORAGE
 
-static inline void store_start(u32 tgid, u32 pid, u32 cpu, u64 ts)
+static inline void store_start(u32 tgid, u32 pid, u64 ts)
 {
-    if (PID_FILTER)
+    if (FILTER)
         return;
 
-    if (IDLE_FILTER)
-        return;
-
-    entry_key_t entry_key = { .pid = pid, .cpu = cpu };
-    start.update(&entry_key, &ts);
+    start.update(&pid, &ts);
 }
 
-static inline void update_hist(u32 tgid, u32 pid, u32 cpu, u64 ts)
+static inline void update_hist(u32 tgid, u32 pid, u64 ts)
 {
-    if (PID_FILTER)
+    if (FILTER)
         return;
 
-    if (IDLE_FILTER)
-        return;
-
-    entry_key_t entry_key = { .pid = pid, .cpu = cpu };
-    u64 *tsp = start.lookup(&entry_key);
+    u64 *tsp = start.lookup(&pid);
     if (tsp == 0)
         return;
 
@@ -119,21 +99,26 @@ int sched_switch(struct pt_regs *ctx, struct task_struct *prev)
     u64 ts = bpf_ktime_get_ns();
     u64 pid_tgid = bpf_get_current_pid_tgid();
     u32 tgid = pid_tgid >> 32, pid = pid_tgid;
-    u32 cpu = bpf_get_smp_processor_id();
 
-    u32 prev_pid = prev->pid;
-    u32 prev_tgid = prev->tgid;
 #ifdef ONCPU
-    update_hist(prev_tgid, prev_pid, cpu, ts);
+    if (prev->state == TASK_RUNNING) {
 #else
-    store_start(prev_tgid, prev_pid, cpu, ts);
+    if (1) {
 #endif
+        u32 prev_pid = prev->pid;
+        u32 prev_tgid = prev->tgid;
+#ifdef ONCPU
+        update_hist(prev_tgid, prev_pid, ts);
+#else
+        store_start(prev_tgid, prev_pid, ts);
+#endif
+    }
 
 BAIL:
 #ifdef ONCPU
-    store_start(tgid, pid, cpu, ts);
+    store_start(tgid, pid, ts);
 #else
-    update_hist(tgid, pid, cpu, ts);
+    update_hist(tgid, pid, ts);
 #endif
 
     return 0;
@@ -141,16 +126,9 @@ BAIL:
 """
 
 if args.pid:
-    bpf_text = bpf_text.replace('PID_FILTER', 'tgid != %s' % args.pid)
+    bpf_text = bpf_text.replace('FILTER', 'tgid != %s' % args.pid)
 else:
-    bpf_text = bpf_text.replace('PID_FILTER', '0')
-
-# set idle filter
-idle_filter = 'pid == 0'
-if args.include_idle:
-    idle_filter = '0'
-bpf_text = bpf_text.replace('IDLE_FILTER', idle_filter)
-
+    bpf_text = bpf_text.replace('FILTER', '0')
 if args.milliseconds:
     bpf_text = bpf_text.replace('FACTOR', 'delta /= 1000000;')
     label = "msecs"
@@ -164,7 +142,7 @@ if args.pids or args.tids:
         pid = "pid"
         section = "tid"
     bpf_text = bpf_text.replace('STORAGE',
-        'BPF_HISTOGRAM(dist, pid_key_t, MAX_PID);')
+        'BPF_HISTOGRAM(dist, pid_key_t);')
     bpf_text = bpf_text.replace('STORE',
         'pid_key_t key = {.id = ' + pid + ', .slot = bpf_log2l(delta)}; ' +
         'dist.increment(key);')
@@ -172,17 +150,14 @@ else:
     section = ""
     bpf_text = bpf_text.replace('STORAGE', 'BPF_HISTOGRAM(dist);')
     bpf_text = bpf_text.replace('STORE',
-        'dist.atomic_increment(bpf_log2l(delta));')
+        'dist.increment(bpf_log2l(delta));')
 if debug or args.ebpf:
     print(bpf_text)
     if args.ebpf:
         exit()
 
-max_pid = int(open("/proc/sys/kernel/pid_max").read())
-
-b = BPF(text=bpf_text, cflags=["-DMAX_PID=%d" % max_pid])
-b.attach_kprobe(event_re="^finish_task_switch$|^finish_task_switch\.isra\.\d$",
-                fn_name="sched_switch")
+b = BPF(text=bpf_text)
+b.attach_kprobe(event="finish_task_switch", fn_name="sched_switch")
 
 print("Tracing %s-CPU time... Hit Ctrl-C to end." %
       ("off" if args.offcpu else "on"))

@@ -2,7 +2,7 @@
 .SH NAME
 cachetop \- Statistics for linux page cache hit/miss ratios per processes. Uses Linux eBPF/bcc.
 .SH SYNOPSIS
-.B cachetop [\-p PID]
+.B cachetop
 [interval]
 .SH DESCRIPTION
 This traces four kernel functions and prints per-processes summaries every
@@ -15,10 +15,6 @@ need updating to match any changes to these functions. Edit the script to
 customize which functions are traced.
 
 Since this uses BPF, only the root user can use this tool.
-.SH OPTIONS
-.TP
-\-p PID
-Trace this PID only.
 .SH KEYBINDINGS
 The following keybindings can be used to control the output of \fBcachetop\fR.
 .TP
@@ -90,6 +86,6 @@ Linux
 .SH STABILITY
 Unstable - in development.
 .SH AUTHOR
-Emmanuel Bretelle, Rocky Xing
+Emmanuel Bretelle
 .SH SEE ALSO
 cachestat (8)

@@ -1,13 +1,13 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 
 from unittest import main, skipUnless, TestCase
-from utils import kernel_version_ge
+import distutils.version
 import os
 import subprocess
 import sys
 import tempfile
 
-TOOLS_DIR = "/bcc/tools/"
+TOOLS_DIR = "../../tools/"
 
 
 class cfg:
@@ -17,6 +17,18 @@ class cfg:
     # for its own needs in libc, so this amount should be large enough to be
     # the biggest allocation.
     leaking_amount = 30000
+
+
+def kernel_version_ge(major, minor):
+    # True if running kernel is >= X.Y
+    version = distutils.version.LooseVersion(os.uname()[2]).version
+    if version[0] > major:
+        return True
+    if version[0] < major:
+        return False
+    if minor and version[1] < minor:
+        return False
+    return True
 
 
 def setUpModule():

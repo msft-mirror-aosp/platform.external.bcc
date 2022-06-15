@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 #
 # xdp_macswap_count.py Swap Source and Destination MAC addresses on
 #                      incoming packets and transmit packets back on
@@ -31,7 +31,7 @@ if len(sys.argv) == 2:
 if len(sys.argv) == 3:
     if "-S" in sys.argv:
         # XDP_FLAGS_SKB_MODE
-        flags |= BPF.XDP_FLAGS_SKB_MODE
+        flags |= 2 << 0
 
     if "-S" == sys.argv[1]:
         device = sys.argv[2]
@@ -50,6 +50,7 @@ else:
 
 # load BPF program
 b = BPF(text = """
+#define KBUILD_MODNAME "foo"
 #include <uapi/linux/bpf.h>
 #include <linux/in.h>
 #include <linux/if_ether.h>
@@ -59,7 +60,7 @@ b = BPF(text = """
 #include <linux/ipv6.h>
 
 
-BPF_PERCPU_ARRAY(dropcnt, long, 256);
+BPF_TABLE("percpu_array", uint32_t, long, dropcnt, 256);
 
 static inline int parse_ipv4(void *data, u64 nh_off, void *data_end) {
     struct iphdr *iph = data + nh_off;
@@ -140,7 +141,7 @@ int xdp_prog1(struct CTXTYPE *ctx) {
     else
         index = 0;
 
-    if (index == IPPROTO_UDP) {
+    if (h_proto == IPPROTO_UDP) {
         swap_src_dst_mac(data);
         rc = XDP_TX;
     }
@@ -180,7 +181,7 @@ while 1:
         time.sleep(1)
     except KeyboardInterrupt:
         print("Removing filter from device")
-        break
+        break;
 
 if mode == BPF.XDP:
     b.remove_xdp(device, flags)
