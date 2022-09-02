@@ -29,7 +29,7 @@ struct env {
 	bool runqocc;
 	bool timestamp;
 	time_t interval;
-	bool freq;
+	int freq;
 	int times;
 	bool verbose;
 } env = {
@@ -171,12 +171,13 @@ static struct hist zero;
 
 static void print_runq_occupancy(struct runqlen_bpf__bss *bss)
 {
-	__u64 samples, idle = 0, queued = 0;
 	struct hist hist;
 	int slot, i = 0;
 	float runqocc;
 
 	do {
+		__u64 samples, idle = 0, queued = 0;
+
 		hist = bss->hists[i];
 		bss->hists[i] = zero;
 		for (slot = 0; slot < MAX_SLOTS; slot++) {
