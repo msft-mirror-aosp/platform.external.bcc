@@ -570,3 +570,63 @@ cc_binary {
     generated_headers:  ["vfsstat.skel.h"],
     defaults: ["bcc_binary_defaults"],
 }
+
+cc_object {
+    name: "biolatency.bpf.o",
+    srcs: ["biolatency.bpf.c"],
+    defaults: ["bcc_bpf_defaults"],
+}
+
+genrule {
+    name: "biolatency.skel.h",
+    srcs: [":biolatency.bpf.o"],
+    out: ["biolatency.skel.h"],
+    defaults: ["bpf_skeleton_hdr_defaults"],
+}
+
+cc_binary {
+    name: "biolatency",
+    srcs: ["biolatency.c"],
+    generated_headers:  ["biolatency.skel.h"],
+    defaults: ["bcc_binary_defaults"],
+}
+
+cc_object {
+    name: "biostacks.bpf.o",
+    srcs: ["biostacks.bpf.c"],
+    defaults: ["bcc_bpf_defaults"],
+}
+
+genrule {
+    name: "biostacks.skel.h",
+    srcs: [":biostacks.bpf.o"],
+    out: ["biostacks.skel.h"],
+    defaults: ["bpf_skeleton_hdr_defaults"],
+}
+
+cc_binary {
+    name: "biostacks",
+    srcs: ["biostacks.c"],
+    generated_headers:  ["biostacks.skel.h"],
+    defaults: ["bcc_binary_defaults"],
+}
+
+cc_object {
+    name: "biosnoop.bpf.o",
+    srcs: ["biosnoop.bpf.c"],
+    defaults: ["bcc_bpf_defaults"],
+}
+
+genrule {
+    name: "biosnoop.skel.h",
+    srcs: [":biosnoop.bpf.o"],
+    out: ["biosnoop.skel.h"],
+    defaults: ["bpf_skeleton_hdr_defaults"],
+}
+
+cc_binary {
+    name: "biosnoop",
+    srcs: ["biosnoop.c"],
+    generated_headers:  ["biosnoop.skel.h"],
+    defaults: ["bcc_binary_defaults"],
+}
