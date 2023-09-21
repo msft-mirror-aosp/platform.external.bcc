@@ -570,3 +570,134 @@ cc_binary {
     generated_headers:  ["vfsstat.skel.h"],
     defaults: ["bcc_binary_defaults"],
 }
+
+cc_object {
+    name: "biolatency.bpf.o",
+    srcs: ["biolatency.bpf.c"],
+    defaults: ["bcc_bpf_defaults"],
+}
+
+genrule {
+    name: "biolatency.skel.h",
+    srcs: [":biolatency.bpf.o"],
+    out: ["biolatency.skel.h"],
+    defaults: ["bpf_skeleton_hdr_defaults"],
+}
+
+cc_binary {
+    name: "biolatency",
+    srcs: ["biolatency.c"],
+    generated_headers:  ["biolatency.skel.h"],
+    defaults: ["bcc_binary_defaults"],
+}
+
+cc_object {
+    name: "biostacks.bpf.o",
+    srcs: ["biostacks.bpf.c"],
+    defaults: ["bcc_bpf_defaults"],
+}
+
+genrule {
+    name: "biostacks.skel.h",
+    srcs: [":biostacks.bpf.o"],
+    out: ["biostacks.skel.h"],
+    defaults: ["bpf_skeleton_hdr_defaults"],
+}
+
+cc_binary {
+    name: "biostacks",
+    srcs: ["biostacks.c"],
+    generated_headers:  ["biostacks.skel.h"],
+    defaults: ["bcc_binary_defaults"],
+}
+
+cc_object {
+    name: "biosnoop.bpf.o",
+    srcs: ["biosnoop.bpf.c"],
+    defaults: ["bcc_bpf_defaults"],
+}
+
+genrule {
+    name: "biosnoop.skel.h",
+    srcs: [":biosnoop.bpf.o"],
+    out: ["biosnoop.skel.h"],
+    defaults: ["bpf_skeleton_hdr_defaults"],
+}
+
+cc_binary {
+    name: "biosnoop",
+    srcs: ["biosnoop.c"],
+    generated_headers:  ["biosnoop.skel.h"],
+    defaults: ["bcc_binary_defaults"],
+}
+
+// The following tools viz. exitsnoop, biopattern and bitesize
+// will not work on Android without this libbpf patch:
+//
+// https://lore.kernel.org/bpf/20220523212808.603526-1-connoro@google.com/T/#u
+//
+// The patch is trivial but important as it looks for tracepoints under /sys/kernel/tracing
+// as there is no debugfs on Android.
+//
+// Additionally, any new tools which depend on kernel static tracepoints should
+// have this libbpf patch.
+
+cc_object {
+    name: "exitsnoop.bpf.o",
+    srcs: ["exitsnoop.bpf.c"],
+    defaults: ["bcc_bpf_defaults"],
+}
+
+genrule {
+    name: "exitsnoop.skel.h",
+    srcs: [":exitsnoop.bpf.o"],
+    out: ["exitsnoop.skel.h"],
+    defaults: ["bpf_skeleton_hdr_defaults"],
+}
+
+cc_binary {
+    name: "exitsnoop",
+    srcs: ["exitsnoop.c"],
+    generated_headers:  ["exitsnoop.skel.h"],
+    defaults: ["bcc_binary_defaults"],
+}
+
+cc_object {
+    name: "biopattern.bpf.o",
+    srcs: ["biopattern.bpf.c"],
+    defaults: ["bcc_bpf_defaults"],
+}
+
+genrule {
+    name: "biopattern.skel.h",
+    srcs: [":biopattern.bpf.o"],
+    out: ["biopattern.skel.h"],
+    defaults: ["bpf_skeleton_hdr_defaults"],
+}
+
+cc_binary {
+    name: "biopattern",
+    srcs: ["biopattern.c"],
+    generated_headers:  ["biopattern.skel.h"],
+    defaults: ["bcc_binary_defaults"],
+}
+
+cc_object {
+    name: "bitesize.bpf.o",
+    srcs: ["bitesize.bpf.c"],
+    defaults: ["bcc_bpf_defaults"],
+}
+
+genrule {
+    name: "bitesize.skel.h",
+    srcs: [":bitesize.bpf.o"],
+    out: ["bitesize.skel.h"],
+    defaults: ["bpf_skeleton_hdr_defaults"],
+}
+
+cc_binary {
+    name: "bitesize",
+    srcs: ["bitesize.c"],
+    generated_headers:  ["bitesize.skel.h"],
+    defaults: ["bcc_binary_defaults"],
+}
