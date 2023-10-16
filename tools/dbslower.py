@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 #
 # dbslower      Trace MySQL and PostgreSQL queries slower than a threshold.
 #
@@ -100,7 +100,7 @@ struct temp_t {
 };
 
 struct data_t {
-    u64 pid;
+    u32 pid;
     u64 timestamp;
     u64 duration;
     char query[256];

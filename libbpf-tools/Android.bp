@@ -97,6 +97,7 @@ cc_defaults {
     srcs: [
         "android/argp.cpp",
         "trace_helpers.c",
+        "btf_helpers.c",
     ],
     static_libs: [
         "libbpf",
@@ -403,7 +404,10 @@ genrule {
 
 cc_binary {
     name: "oomkill",
-    srcs: ["oomkill.c"],
+    srcs: [
+        "oomkill.c",
+        "compat.c",
+],
     generated_headers:  ["oomkill.skel.h"],
     defaults: ["bcc_binary_defaults"],
 }
