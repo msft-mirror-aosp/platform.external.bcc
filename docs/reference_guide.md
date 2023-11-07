@@ -367,6 +367,7 @@ Examples in situ:
 ### 9. kfuncs
 
 Syntax: KFUNC_PROBE(*function*, typeof(arg1) arg1, typeof(arg2) arge ...)
+        MODULE_KFUNC_PROBE(*module*, *function*, typeof(arg1) arg1, typeof(arg2) arge ...)
 
 This is a macro that instruments the kernel function via trampoline
 *before* the function is executed. It's defined by *function* name and
@@ -388,6 +389,7 @@ Examples in situ:
 ### 10. kretfuncs
 
 Syntax: KRETFUNC_PROBE(*event*, typeof(arg1) arg1, typeof(arg2) arge ..., int ret)
+        MODULE_KRETFUNC_PROBE(*module*, *function*, typeof(arg1) arg1, typeof(arg2) arge ...)
 
 This is a macro that instruments the kernel function via trampoline
 *after* the function is executed. It's defined by *function* name and
@@ -868,6 +870,23 @@ ignores the data associated with the discarded event. Must be preceded by a call
 Examples in situ: <!-- TODO -->
 [search /examples](https://github.com/iovisor/bcc/search?q=ringbuf_submit+path%3Aexamples&type=Code),
 
+### 10. ringbuf_query()
+
+Syntax: ```u64 ringbuf_query(u64 flags)```
+
+Return: Requested value, or 0, if flags are not recognized
+
+Flags:
+ - ```BPF_RB_AVAIL_DATA```: Amount of data not yet consumed
+ - ```BPF_RB_RING_SIZE```: The size of ring buffer
+ - ```BPF_RB_CONS_POS```: Consumer position
+ - ```BPF_RB_PROD_POS```: Producer(s) position
+
+A method of the BPF_RINGBUF_OUTPUT table, for getting various properties of ring buffer. Returned values are momentarily snapshots of ring buffer state and could be off by the time helper returns, so this should be used only for debugging/reporting reasons or for implementing various heuristics, that take into account highly-changeable nature of some of those characteristics.
+
+Examples in situ: <!-- TODO -->
+[search /examples](https://github.com/iovisor/bcc/search?q=ringbuf_query+path%3Aexamples&type=Code),
+
 ## Maps
 
 Maps are BPF data stores, and are the basis for higher level object types including tables, hashes, and histograms.
@@ -1145,9 +1164,9 @@ Examples in situ:
 
 ### 13. BPF_XSKMAP
 
-Syntax: ```BPF_XSKMAP(name, size)```
+Syntax: ```BPF_XSKMAP(name, size [, "/sys/fs/bpf/xyz"])```
 
-This creates a xsk map named ```name``` with ```size``` entries. Each entry represents one NIC's queue id. This map is only used in XDP to redirect packet to an AF_XDP socket. If the AF_XDP socket is binded to a queue which is different than the current packet's queue id, the packet will be dropped. For kernel v5.3 and latter, `lookup` method is available and can be used to check whether and AF_XDP socket is available for the current packet's queue id. More details at [AF_XDP](https://www.kernel.org/doc/html/latest/networking/af_xdp.html).
+This creates a xsk map named ```name``` with ```size``` entries and pin it to the bpffs as a FILE. Each entry represents one NIC's queue id. This map is only used in XDP to redirect packet to an AF_XDP socket. If the AF_XDP socket is binded to a queue which is different than the current packet's queue id, the packet will be dropped. For kernel v5.3 and latter, `lookup` method is available and can be used to check whether and AF_XDP socket is available for the current packet's queue id. More details at [AF_XDP](https://www.kernel.org/doc/html/latest/networking/af_xdp.html).
 
 For example:
 ```C
