@@ -512,6 +512,9 @@ cc_binary {
     defaults: ["bcc_binary_defaults"],
 }
 
+//The following targets are temporarily disabled to to b/241472915
+//TODO (b/241472915)
+/*
 cc_object {
     name: "tcpconnect.bpf.o",
     srcs: ["tcpconnect.bpf.c"],
@@ -534,6 +537,7 @@ cc_binary {
     generated_headers:  ["tcpconnect.skel.h"],
     defaults: ["bcc_binary_defaults"],
 }
+*/
 
 cc_object {
     name: "tcprtt.bpf.o",
