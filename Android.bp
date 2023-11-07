@@ -98,6 +98,7 @@ cc_library {
             srcs: [
                 "src/cc/libbpf.c",
                 "src/cc/perf_reader.c",
+                "src/cc/bcc_zip.c",
             ],
             sanitize: {
                 misc_undefined: ["integer"],

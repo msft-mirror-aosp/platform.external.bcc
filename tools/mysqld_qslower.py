@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 #
 # mysqld_qslower    MySQL server queries slower than a threshold.
 #                   For Linux, uses BCC, BPF. Embedded C.
@@ -48,7 +48,7 @@ struct start_t {
 };
 
 struct data_t {
-    u64 pid;
+    u32 pid;
     u64 ts;
     u64 delta;
     char query[QUERY_MAX];
