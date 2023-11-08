@@ -5,6 +5,7 @@
 #include <bpf/bpf_core_read.h>
 #include <bpf/bpf_tracing.h>
 #include "biosnoop.h"
+#include "core_fixes.bpf.h"
 
 #define MAX_ENTRIES	10240
 
@@ -12,6 +13,7 @@ const volatile bool filter_cg = false;
 const volatile bool targ_queued = false;
 const volatile bool filter_dev = false;
 const volatile __u32 targ_dev = 0;
+const volatile __u64 min_ns = 0;
 
 extern __u32 LINUX_KERNEL_VERSION __kconfig;
 
@@ -32,7 +34,6 @@ struct {
 	__uint(max_entries, MAX_ENTRIES);
 	__type(key, struct request *);
 	__type(value, struct piddata);
-	__uint(map_flags, BPF_F_NO_PREALLOC);
 } infobyreq SEC(".maps");
 
 struct stage {
@@ -75,6 +76,15 @@ int BPF_PROG(blk_account_io_start, struct request *rq)
 	return trace_pid(rq);
 }
 
+SEC("tp_btf/block_io_start")
+int BPF_PROG(block_io_start, struct request *rq)
+{
+	if (filter_cg && !bpf_current_task_under_cgroup(&cgroup_map, 0))
+		return 0;
+
+	return trace_pid(rq);
+}
+
 SEC("kprobe/blk_account_io_merge_bio")
 int BPF_KPROBE(blk_account_io_merge_bio, struct request *rq)
 {
@@ -92,7 +102,7 @@ int trace_rq_start(struct request *rq, bool insert)
 
 	stagep = bpf_map_lookup_elem(&start, &rq);
 	if (!stagep) {
-		struct gendisk *disk = BPF_CORE_READ(rq, rq_disk);
+		struct gendisk *disk = get_disk(rq);
 
 		stage.dev = disk ? MKDEV(BPF_CORE_READ(disk, major),
 				BPF_CORE_READ(disk, first_minor)) : 0;
@@ -120,7 +130,7 @@ int BPF_PROG(block_rq_insert)
 	 * from TP_PROTO(struct request_queue *q, struct request *rq)
 	 * to TP_PROTO(struct request *rq)
 	 */
-	if (LINUX_KERNEL_VERSION > KERNEL_VERSION(5, 10, 0))
+	if (LINUX_KERNEL_VERSION >= KERNEL_VERSION(5, 11, 0))
 		return trace_rq_start((void *)ctx[0], true);
 	else
 		return trace_rq_start((void *)ctx[1], true);
@@ -137,7 +147,7 @@ int BPF_PROG(block_rq_issue)
 	 * from TP_PROTO(struct request_queue *q, struct request *rq)
 	 * to TP_PROTO(struct request *rq)
 	 */
-	if (LINUX_KERNEL_VERSION > KERNEL_VERSION(5, 10, 0))
+	if (LINUX_KERNEL_VERSION >= KERNEL_VERSION(5, 11, 0))
 		return trace_rq_start((void *)ctx[0], false);
 	else
 		return trace_rq_start((void *)ctx[1], false);
@@ -160,7 +170,7 @@ int BPF_PROG(block_rq_complete, struct request *rq, int error,
 	if (!stagep)
 		return 0;
 	delta = (s64)(ts - stagep->issue);
-	if (delta < 0)
+	if (delta < 0 || delta < min_ns)
 		goto cleanup;
 	piddatap = bpf_map_lookup_elem(&infobyreq, &rq);
 	if (!piddatap) {
@@ -178,9 +188,9 @@ int BPF_PROG(block_rq_complete, struct request *rq, int error,
 			event.qdelta = stagep->issue - stagep->insert;
 	}
 	event.ts = ts;
-	event.sector = rq->__sector;
-	event.len = rq->__data_len;
-	event.cmd_flags = rq->cmd_flags;
+	event.sector = BPF_CORE_READ(rq, __sector);
+	event.len = BPF_CORE_READ(rq, __data_len);
+	event.cmd_flags = BPF_CORE_READ(rq, cmd_flags);
 	event.dev = stagep->dev;
 	bpf_perf_event_output(ctx, &events, BPF_F_CURRENT_CPU, &event,
 			sizeof(event));
