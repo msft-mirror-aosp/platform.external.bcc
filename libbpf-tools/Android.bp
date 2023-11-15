@@ -88,6 +88,7 @@ genrule_defaults {
 
 cc_defaults {
     name: "bcc_binary_defaults",
+    defaults: ["elfutils_transitive_defaults"],
     generated_headers: [
         "libbpf_headers",
     ],
