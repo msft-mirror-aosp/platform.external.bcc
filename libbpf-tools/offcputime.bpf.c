@@ -63,6 +63,7 @@ int BPF_PROG(sched_switch, bool preempt, struct task_struct *prev, struct task_s
 	struct internal_key *i_keyp, i_key;
 	struct val_t *valp, val;
 	s64 delta;
+	u64 udelta;
 	u32 pid;
 
 	if (allow_record(prev)) {
@@ -94,13 +95,14 @@ int BPF_PROG(sched_switch, bool preempt, struct task_struct *prev, struct task_s
 	delta = (s64)(bpf_ktime_get_ns() - i_keyp->start_ts);
 	if (delta < 0)
 		goto cleanup;
-	delta /= 1000U;
-	if (delta < min_block_ns || delta > max_block_ns)
+	udelta = (u64)delta;
+	udelta /= 1000U;
+	if (udelta < min_block_ns || udelta > max_block_ns)
 		goto cleanup;
 	valp = bpf_map_lookup_elem(&info, &i_keyp->key);
 	if (!valp)
 		goto cleanup;
-	__sync_fetch_and_add(&valp->delta, delta);
+	__sync_fetch_and_add(&valp->delta, udelta);
 
 cleanup:
 	bpf_map_delete_elem(&start, &pid);
