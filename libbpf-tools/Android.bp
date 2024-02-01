@@ -37,6 +37,8 @@ cc_defaults {
         "-Wno-pointer-arith",
         "-Wno-unused-command-line-argument",
         "-Wno-unused-parameter",
+        "-mllvm -bpf-stack-size=1024",
+        "-g",
     ],
     header_libs: [
         "bpf_prog_headers",
