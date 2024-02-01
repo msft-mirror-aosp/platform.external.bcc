@@ -41,6 +41,7 @@ static int probe_return(enum fs_file_op op)
 	__u64 ts = bpf_ktime_get_ns();
 	__u64 *tsp, slot;
 	__s64 delta;
+	__u64 udelta;
 
 	tsp = bpf_map_lookup_elem(&starts, &tid);
 	if (!tsp)
@@ -53,12 +54,13 @@ static int probe_return(enum fs_file_op op)
 	if (delta < 0)
 		goto cleanup;
 
+	udelta = (__u64)delta;
 	if (in_ms)
-		delta /= 1000000;
+		udelta /= 1000000;
 	else
-		delta /= 1000;
+		udelta /= 1000;
 
-	slot = log2l(delta);
+	slot = log2l(udelta);
 	if (slot >= MAX_SLOTS)
 		slot = MAX_SLOTS - 1;
 	__sync_fetch_and_add(&hists[op].slots[slot], 1);
