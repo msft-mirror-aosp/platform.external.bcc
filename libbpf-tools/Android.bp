@@ -28,7 +28,6 @@ cc_defaults {
     name: "bcc_bpf_defaults",
     compile_multilib: "first",
     cflags: [
-        "--target=bpf",
         "-fno-data-sections",
         "-fno-function-sections",
         "-fno-stack-protector",
@@ -70,6 +69,7 @@ cc_defaults {
             ],
         },
     },
+    bpf_target: true,
     visibility: ["//visibility:private"],
 }
 
