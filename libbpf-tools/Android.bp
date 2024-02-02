@@ -28,7 +28,6 @@ cc_defaults {
     name: "bcc_bpf_defaults",
     compile_multilib: "first",
     cflags: [
-        "--target=bpf",
         "-fno-data-sections",
         "-fno-function-sections",
         "-fno-stack-protector",
@@ -37,6 +36,8 @@ cc_defaults {
         "-Wno-pointer-arith",
         "-Wno-unused-command-line-argument",
         "-Wno-unused-parameter",
+        "-mllvm -bpf-stack-size=1024",
+        "-g",
     ],
     header_libs: [
         "bpf_prog_headers",
@@ -68,6 +69,7 @@ cc_defaults {
             ],
         },
     },
+    bpf_target: true,
     visibility: ["//visibility:private"],
 }
 
