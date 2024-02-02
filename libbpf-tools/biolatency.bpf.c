@@ -101,6 +101,7 @@ static int handle_block_rq_complete(struct request *rq, int error, unsigned int 
 	struct hist_key hkey = {};
 	struct hist *histp;
 	s64 delta;
+	u64 udelta;
 
 	if (filter_cg && !bpf_current_task_under_cgroup(&cgroup_map, 0))
 		return 0;
@@ -112,6 +113,8 @@ static int handle_block_rq_complete(struct request *rq, int error, unsigned int 
 	delta = (s64)(ts - *tsp);
 	if (delta < 0)
 		goto cleanup;
+
+	udelta = (u64)delta;
 
 	if (targ_per_disk) {
 		struct gendisk *disk = get_disk(rq);
@@ -131,10 +134,10 @@ static int handle_block_rq_complete(struct request *rq, int error, unsigned int 
 	}
 
 	if (targ_ms)
-		delta /= 1000000U;
+		udelta /= 1000000U;
 	else
-		delta /= 1000U;
-	slot = log2l(delta);
+		udelta /= 1000U;
+	slot = log2l(udelta);
 	if (slot >= MAX_SLOTS)
 		slot = MAX_SLOTS - 1;
 	__sync_fetch_and_add(&histp->slots[slot], 1);

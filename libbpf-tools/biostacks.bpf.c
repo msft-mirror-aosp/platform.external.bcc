@@ -74,6 +74,7 @@ int trace_done(void *ctx, struct request *rq)
 	struct internal_rqinfo *i_rqinfop;
 	struct hist *histp;
 	s64 delta;
+	u64 udelta;
 
 	i_rqinfop = bpf_map_lookup_elem(&rqinfos, &rq);
 	if (!i_rqinfop)
@@ -81,14 +82,15 @@ int trace_done(void *ctx, struct request *rq)
 	delta = (s64)(ts - i_rqinfop->start_ts);
 	if (delta < 0)
 		goto cleanup;
+	udelta = (u64)delta;
 	histp = bpf_map_lookup_or_try_init(&hists, &i_rqinfop->rqinfo, &zero);
 	if (!histp)
 		goto cleanup;
 	if (targ_ms)
-		delta /= 1000000U;
+		udelta /= 1000000U;
 	else
-		delta /= 1000U;
-	slot = log2l(delta);
+		udelta /= 1000U;
+	slot = log2l(udelta);
 	if (slot >= MAX_SLOTS)
 		slot = MAX_SLOTS - 1;
 	__sync_fetch_and_add(&histp->slots[slot], 1);
