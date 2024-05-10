@@ -3,6 +3,8 @@
 //
 // Based on filelife(8) from BCC by Brendan Gregg & Allan McAleavy.
 // 20-Mar-2020   Wenbo Zhang   Created this.
+// 13-Nov-2022   Rong Tao      Check btf struct field for CO-RE and add vfs_open()
+// 23-Aug-2023   Rong Tao      Add vfs_* 'struct mnt_idmap' support.(CO-RE)
 #include <argp.h>
 #include <signal.h>
 #include <stdio.h>
@@ -14,6 +16,7 @@
 #include <bpf/bpf.h>
 #include "filelife.h"
 #include "filelife.skel.h"
+#include "btf_helpers.h"
 #include "trace_helpers.h"
 
 #define PERF_BUFFER_PAGES	16
@@ -105,6 +108,7 @@ void handle_lost_events(void *ctx, int cpu, __u64 lost_cnt)
 
 int main(int argc, char **argv)
 {
+	LIBBPF_OPTS(bpf_object_open_opts, open_opts);
 	static const struct argp argp = {
 		.options = opts,
 		.parser = parse_arg,
@@ -118,10 +122,15 @@ int main(int argc, char **argv)
 	if (err)
 		return err;
 
-	libbpf_set_strict_mode(LIBBPF_STRICT_ALL);
 	libbpf_set_print(libbpf_print_fn);
 
-	obj = filelife_bpf__open();
+	err = ensure_core_btf(&open_opts);
+	if (err) {
+		fprintf(stderr, "failed to fetch necessary BTF for CO-RE: %s\n", strerror(-err));
+		return 1;
+	}
+
+	obj = filelife_bpf__open_opts(&open_opts);
 	if (!obj) {
 		fprintf(stderr, "failed to open BPF object\n");
 		return 1;
@@ -129,6 +138,9 @@ int main(int argc, char **argv)
 
 	/* initialize global data (filtering options) */
 	obj->rodata->targ_tgid = env.pid;
+
+	if (!kprobe_exists("security_inode_create"))
+		bpf_program__set_autoload(obj->progs.security_inode_create, false);
 
 	err = filelife_bpf__load(obj);
 	if (err) {
@@ -172,6 +184,7 @@ int main(int argc, char **argv)
 cleanup:
 	perf_buffer__free(pb);
 	filelife_bpf__destroy(obj);
+	cleanup_core_btf(&open_opts);
 
 	return err != 0;
 }

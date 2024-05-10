@@ -7,6 +7,7 @@
 #include "biostacks.h"
 #include "bits.bpf.h"
 #include "maps.bpf.h"
+#include "core_fixes.bpf.h"
 
 #define MAX_ENTRIES	10240
 
@@ -24,7 +25,6 @@ struct {
 	__uint(max_entries, MAX_ENTRIES);
 	__type(key, struct request *);
 	__type(value, struct internal_rqinfo);
-	__uint(map_flags, BPF_F_NO_PREALLOC);
 } rqinfos SEC(".maps");
 
 struct {
@@ -32,7 +32,6 @@ struct {
 	__uint(max_entries, MAX_ENTRIES);
 	__type(key, struct rqinfo);
 	__type(value, struct hist);
-	__uint(map_flags, BPF_F_NO_PREALLOC);
 } hists SEC(".maps");
 
 static struct hist zero;
@@ -41,7 +40,7 @@ static __always_inline
 int trace_start(void *ctx, struct request *rq, bool merge_bio)
 {
 	struct internal_rqinfo *i_rqinfop = NULL, i_rqinfo = {};
-	struct gendisk *disk = BPF_CORE_READ(rq, rq_disk);
+	struct gendisk *disk = get_disk(rq);
 	u32 dev;
 
 	dev = disk ? MKDEV(BPF_CORE_READ(disk, major),
@@ -68,10 +67,37 @@ int trace_start(void *ctx, struct request *rq, bool merge_bio)
 	return 0;
 }
 
-SEC("fentry/blk_account_io_start")
-int BPF_PROG(blk_account_io_start, struct request *rq)
+static __always_inline
+int trace_done(void *ctx, struct request *rq)
 {
-	return trace_start(ctx, rq, false);
+	u64 slot, ts = bpf_ktime_get_ns();
+	struct internal_rqinfo *i_rqinfop;
+	struct hist *histp;
+	s64 delta;
+	u64 udelta;
+
+	i_rqinfop = bpf_map_lookup_elem(&rqinfos, &rq);
+	if (!i_rqinfop)
+		return 0;
+	delta = (s64)(ts - i_rqinfop->start_ts);
+	if (delta < 0)
+		goto cleanup;
+	udelta = (u64)delta;
+	histp = bpf_map_lookup_or_try_init(&hists, &i_rqinfop->rqinfo, &zero);
+	if (!histp)
+		goto cleanup;
+	if (targ_ms)
+		udelta /= 1000000U;
+	else
+		udelta /= 1000U;
+	slot = log2l(udelta);
+	if (slot >= MAX_SLOTS)
+		slot = MAX_SLOTS - 1;
+	__sync_fetch_and_add(&histp->slots[slot], 1);
+
+cleanup:
+	bpf_map_delete_elem(&rqinfos, &rq);
+	return 0;
 }
 
 SEC("kprobe/blk_account_io_merge_bio")
@@ -80,35 +106,28 @@ int BPF_KPROBE(blk_account_io_merge_bio, struct request *rq)
 	return trace_start(ctx, rq, true);
 }
 
+SEC("fentry/blk_account_io_start")
+int BPF_PROG(blk_account_io_start, struct request *rq)
+{
+	return trace_start(ctx, rq, false);
+}
+
 SEC("fentry/blk_account_io_done")
 int BPF_PROG(blk_account_io_done, struct request *rq)
 {
-	u64 slot, ts = bpf_ktime_get_ns();
-	struct internal_rqinfo *i_rqinfop;
-	struct hist *histp;
-	s64 delta;
+	return trace_done(ctx, rq);
+}
 
-	i_rqinfop = bpf_map_lookup_elem(&rqinfos, &rq);
-	if (!i_rqinfop)
-		return 0;
-	delta = (s64)(ts - i_rqinfop->start_ts);
-	if (delta < 0)
-		goto cleanup;
-	histp = bpf_map_lookup_or_try_init(&hists, &i_rqinfop->rqinfo, &zero);
-	if (!histp)
-		goto cleanup;
-	if (targ_ms)
-		delta /= 1000000U;
-	else
-		delta /= 1000U;
-	slot = log2l(delta);
-	if (slot >= MAX_SLOTS)
-		slot = MAX_SLOTS - 1;
-	__sync_fetch_and_add(&histp->slots[slot], 1);
+SEC("tp_btf/block_io_start")
+int BPF_PROG(block_io_start, struct request *rq)
+{
+	return trace_start(ctx, rq, false);
+}
 
-cleanup:
-	bpf_map_delete_elem(&rqinfos, &rq);
-	return 0;
+SEC("tp_btf/block_io_done")
+int BPF_PROG(block_io_done, struct request *rq)
+{
+	return trace_done(ctx, rq);
 }
 
 char LICENSE[] SEC("license") = "GPL";
