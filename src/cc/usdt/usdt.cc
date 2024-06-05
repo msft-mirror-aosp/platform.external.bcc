@@ -38,6 +38,8 @@ Location::Location(uint64_t addr, const std::string &bin_path, const char *arg_f
 
 #ifdef __aarch64__
   ArgumentParser_aarch64 parser(arg_fmt);
+#elif __loongarch64
+  ArgumentParser_loongarch64 parser(arg_fmt);
 #elif __powerpc64__
   ArgumentParser_powerpc64 parser(arg_fmt);
 #elif __s390x__
@@ -149,7 +151,7 @@ bool Probe::disable() {
   return true;
 }
 
-std::string Probe::largest_arg_type(size_t arg_n) {
+const char *Probe::largest_arg_type(size_t arg_n) {
   Argument *largest = nullptr;
   for (Location &location : locations_) {
     Argument *candidate = &location.arguments_[arg_n];
@@ -159,7 +161,7 @@ std::string Probe::largest_arg_type(size_t arg_n) {
   }
 
   assert(largest);
-  return largest->ctype();
+  return largest->ctype_name();
 }
 
 bool Probe::usdt_getarg(std::ostream &stream) {
@@ -556,7 +558,7 @@ const char *bcc_usdt_get_probe_argctype(
 ) {
   USDT::Probe *p = static_cast<USDT::Context *>(ctx)->get(probe_name);
   if (p)
-    return p->get_arg_ctype(arg_index).c_str();
+    return p->get_arg_ctype_name(arg_index);
   return "";
 }
 
@@ -565,7 +567,7 @@ const char *bcc_usdt_get_fully_specified_probe_argctype(
 ) {
   USDT::Probe *p = static_cast<USDT::Context *>(ctx)->get(provider_name, probe_name);
   if (p)
-    return p->get_arg_ctype(arg_index).c_str();
+    return p->get_arg_ctype_name(arg_index);
   return "";
 }
 

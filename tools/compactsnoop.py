@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 # @lint-avoid-python-3-compatibility-imports
 #
 # compactsnoop  Trace compact zone and print details including issuing PID.
@@ -124,7 +124,7 @@ static inline int zone_idx_(struct zone *zone)
 {
     struct pglist_data *zone_pgdat = NULL;
     bpf_probe_read_kernel(&zone_pgdat, sizeof(zone_pgdat), &zone->zone_pgdat);
-    return zone - zone_pgdat->node_zones;
+    return ((u64)zone - (u64)zone_pgdat->node_zones)/sizeof(struct zone);
 }
 
 #ifdef EXTNEDED_FIELDS
@@ -237,11 +237,9 @@ RAW_TRACEPOINT_PROBE(mm_compaction_suitable)
     return 0;
 }
 
-RAW_TRACEPOINT_PROBE(mm_compaction_begin)
+TRACEPOINT_PROBE(compaction, mm_compaction_begin)
 {
-    // TP_PROTO(unsigned long zone_start, unsigned long migrate_pfn,
-    //          unsigned long free_pfn, unsigned long zone_end, bool sync)
-    bool sync = (bool)ctx->args[4];
+    bool sync = args->sync;
 
     u64 id = bpf_get_current_pid_tgid();
     struct val_t *valp = start.lookup(&id);
@@ -255,12 +253,9 @@ RAW_TRACEPOINT_PROBE(mm_compaction_begin)
     return 0;
 }
 
-RAW_TRACEPOINT_PROBE(mm_compaction_end)
+TRACEPOINT_PROBE(compaction, mm_compaction_end)
 {
-    // TP_PROTO(unsigned long zone_start, unsigned long migrate_pfn,
-    //          unsigned long free_pfn, unsigned long zone_end, bool sync,
-    //          int status)
-    submit_event(ctx, ctx->args[5]);
+    submit_event(args, args->status);
     return 0;
 }
 """
