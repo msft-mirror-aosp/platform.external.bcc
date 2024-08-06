@@ -39,9 +39,6 @@ cc_defaults {
         "-mllvm -bpf-stack-size=1024",
         "-g",
     ],
-    header_libs: [
-        "bpf_prog_headers",
-    ],
     generated_headers: ["libbpf_headers"],
     arch: {
         arm: {
