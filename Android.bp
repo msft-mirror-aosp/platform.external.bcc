@@ -113,13 +113,10 @@ cc_library {
     export_header_lib_headers: ["libbpf_bcc_headers"],
     local_include_dirs: ["src/cc"],
 
-    defaults: ["bpf_defaults"],
+    defaults: ["bpf_cc_defaults"],
     cflags: [
         "-DHAVE_EXTERNAL_LIBBPF",
         "-DMINIMAL_LIBBPF",
-        "-Werror",
-        "-Wall",
-        "-Wextra",
         "-Wno-sign-compare",
         "-Wno-typedef-redefinition",
         "-Wno-unused-parameter",
