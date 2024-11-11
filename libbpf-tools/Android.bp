@@ -27,6 +27,10 @@ package {
 cc_defaults {
     name: "bcc_bpf_defaults",
     compile_multilib: "first",
+
+    // Pinned to pre-C23 because of bool/false/true #defines in "vmlinux.h".
+    c_std: "gnu17",
+
     cflags: [
         "-fno-data-sections",
         "-fno-function-sections",
